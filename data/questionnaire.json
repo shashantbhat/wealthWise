@@ -1,0 +1,297 @@
+{
+  "onboarding_questionnaire": [
+    {
+      "section": "Basic Profile",
+      "questions": [
+        {
+          "id": "age_group",
+          "question": "What is your age group?",
+          "type": "single_choice",
+          "options": ["<18", "18-25", "26-35", "36-45", "46+"]
+        },
+        {
+          "id": "occupation",
+          "question": "What is your occupation?",
+          "type": "single_choice",
+          "options": [
+            "Student",
+            "Salaried Employee",
+            "Self-employed",
+            "Business Owner",
+            "Freelancer",
+            "Other"
+          ]
+        },
+        {
+          "id": "city_type",
+          "question": "What type of city do you live in?",
+          "type": "single_choice",
+          "options": ["Metro", "Tier-2", "Tier-3 / Rural"]
+        },
+        {
+          "id": "marital_status",
+          "question": "What is your marital status?",
+          "type": "single_choice",
+          "options": ["Single", "Married"]
+        },
+        {
+          "id": "dependents",
+          "question": "Do you have financial dependents?",
+          "type": "single_choice",
+          "options": ["None", "1", "2", "3+"]
+        }
+      ]
+    },
+    {
+      "section": "Income Details",
+      "questions": [
+        {
+          "id": "monthly_income",
+          "question": "What is your monthly income (after tax)?",
+          "type": "number"
+        },
+        {
+          "id": "multiple_income_sources",
+          "question": "Do you have multiple sources of income?",
+          "type": "single_choice",
+          "options": ["No", "Yes"]
+        },
+        {
+          "id": "income_stability",
+          "question": "How stable is your income?",
+          "type": "single_choice",
+          "options": ["Very stable", "Mostly stable", "Fluctuating"]
+        }
+      ]
+    },
+    {
+      "section": "Expense Pattern",
+      "questions": [
+        {
+          "id": "expense_percentage",
+          "question": "What percentage of your income goes to expenses?",
+          "type": "single_choice",
+          "options": ["0-25%", "25-50%", "50-75%", "75%+"]
+        },
+        {
+          "id": "highest_expense_category",
+          "question": "Which category do you spend the most on?",
+          "type": "single_choice",
+          "options": [
+            "Rent / Housing",
+            "Food",
+            "Transport",
+            "Shopping",
+            "Entertainment",
+            "Education",
+            "Utilities",
+            "Other"
+          ]
+        },
+        {
+          "id": "expense_tracking",
+          "question": "Do you currently track your expenses?",
+          "type": "single_choice",
+          "options": ["Yes regularly", "Sometimes", "No"]
+        },
+        {
+          "id": "payment_method",
+          "question": "What is your primary payment method?",
+          "type": "single_choice",
+          "options": ["Cash", "UPI", "Debit/Credit Card", "Mixed"]
+        }
+      ]
+    },
+    {
+      "section": "Savings Behaviour",
+      "questions": [
+        {
+          "id": "monthly_savings_rate",
+          "question": "What percentage of your income do you save monthly?",
+          "type": "single_choice",
+          "options": ["0-10%", "10-20%", "20-30%", "30%+"]
+        },
+        {
+          "id": "emergency_fund",
+          "question": "Do you have an emergency fund?",
+          "type": "single_choice",
+          "options": [
+            "No",
+            "Less than 3 months expenses",
+            "3-6 months expenses",
+            "More than 6 months"
+          ]
+        },
+        {
+          "id": "current_savings_location",
+          "question": "Where do you keep most of your savings?",
+          "type": "multiple_choice",
+          "options": [
+            "Savings Account",
+            "Fixed Deposit",
+            "Mutual Funds",
+            "Stocks",
+            "Crypto",
+            "Gold",
+            "No Investments"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "Investment Knowledge",
+      "questions": [
+        {
+          "id": "investment_knowledge_level",
+          "question": "How familiar are you with investments?",
+          "type": "single_choice",
+          "options": ["Beginner", "Basic Knowledge", "Intermediate", "Advanced"]
+        },
+        {
+          "id": "known_investments",
+          "question": "Which investments are you familiar with?",
+          "type": "multiple_choice",
+          "options": [
+            "Stocks",
+            "Mutual Funds",
+            "Fixed Deposits",
+            "Real Estate",
+            "Gold",
+            "Bonds",
+            "Crypto"
+          ]
+        },
+        {
+          "id": "previous_investment_experience",
+          "question": "Have you invested before?",
+          "type": "single_choice",
+          "options": ["Yes", "No"]
+        }
+      ]
+    },
+    {
+      "section": "Risk Appetite",
+      "questions": [
+        {
+          "id": "market_drop_reaction",
+          "question": "If your investment drops 20% in value, what would you do?",
+          "type": "single_choice",
+          "options": ["Sell immediately", "Wait for recovery", "Invest more"]
+        },
+        {
+          "id": "risk_preference",
+          "question": "What risk level do you prefer?",
+          "type": "single_choice",
+          "options": [
+            "Low risk, low return",
+            "Balanced risk and return",
+            "High risk, high return"
+          ]
+        },
+        {
+          "id": "investment_horizon",
+          "question": "What is your investment time horizon?",
+          "type": "single_choice",
+          "options": ["<3 years", "3-5 years", "5-10 years", "10+ years"]
+        }
+      ]
+    },
+    {
+      "section": "Financial Goals",
+      "questions": [
+        {
+          "id": "financial_goals",
+          "question": "What financial goals do you currently have?",
+          "type": "multiple_choice",
+          "options": [
+            "Buy a house",
+            "Buy a car",
+            "Education",
+            "Travel",
+            "Retirement",
+            "Business investment",
+            "Other"
+          ]
+        },
+        {
+          "id": "primary_goal",
+          "question": "What is your most important financial goal?",
+          "type": "text"
+        },
+        {
+          "id": "goal_estimated_cost",
+          "question": "What is the estimated cost of this goal?",
+          "type": "number"
+        },
+        {
+          "id": "goal_timeline",
+          "question": "When do you want to achieve this goal?",
+          "type": "single_choice",
+          "options": ["1-3 years", "3-5 years", "5-10 years", "10+ years"]
+        },
+        {
+          "id": "saving_for_goal",
+          "question": "Are you currently saving for this goal?",
+          "type": "single_choice",
+          "options": ["Yes", "No"]
+        }
+      ]
+    },
+    {
+      "section": "Spending Habits",
+      "questions": [
+        {
+          "id": "impulse_purchases",
+          "question": "How often do you make impulse purchases?",
+          "type": "single_choice",
+          "options": ["Rarely", "Sometimes", "Often"]
+        },
+        {
+          "id": "saving_vs_spending",
+          "question": "Which best describes you?",
+          "type": "single_choice",
+          "options": ["Save first then spend", "Spend first then save"]
+        },
+        {
+          "id": "debt_status",
+          "question": "Do you currently have any debt?",
+          "type": "multiple_choice",
+          "options": [
+            "No debt",
+            "Education loan",
+            "Personal loan",
+            "Credit card debt",
+            "Home loan"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "App Features Preference",
+      "questions": [
+        {
+          "id": "interested_features",
+          "question": "Which features interest you the most?",
+          "type": "multiple_choice",
+          "options": [
+            "Voice expense logging",
+            "Smart expense reports",
+            "Investment suggestions",
+            "Goal based planning",
+            "Bill scanning & warranty storage"
+          ]
+        },
+        {
+          "id": "voice_logging_preference",
+          "question": "Would you like AI voice logging for expenses?",
+          "type": "boolean"
+        },
+        {
+          "id": "spending_notifications",
+          "question": "Would you like notifications for spending limits?",
+          "type": "boolean"
+        }
+      ]
+    }
+  ]
+}
