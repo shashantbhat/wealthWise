@@ -3,17 +3,17 @@ import questionnaireData from "@/data/questionnaire.json";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 
@@ -109,50 +109,36 @@ function LandingScreen({ onStart }: { onStart: () => void }) {
 
       {/* Logo */}
       <View style={ls.logoWrap}>
-        <Svg width={104} height={104} viewBox="0 0 104 104">
-          <Circle cx={52} cy={52} r={52} fill="#151528" />
-          <Circle
-            cx={52}
-            cy={52}
-            r={48}
-            fill="none"
-            stroke="#00D09C"
-            strokeWidth={1.5}
-            opacity={0.3}
-          />
-          {/* "W" / upward chart path */}
+        <Svg width={80} height={80} viewBox="0 0 80 80">
+          <Circle cx={40} cy={40} r={40} fill="#FFFFFF" opacity={0.05} />
+          {/* Minimal line chart uptrend */}
           <Path
-            d="M30 40 L41 66 L52 50 L63 66 L74 40"
-            stroke="#00D09C"
-            strokeWidth={4.5}
+            d="M20 50 L35 35 L50 42 L65 20"
+            stroke="#FFFFFF"
+            strokeWidth={3}
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* Growth dot on the peak */}
-          <Circle cx={74} cy={40} r={5} fill="#00D09C" />
         </Svg>
       </View>
 
       {/* App name & tagline */}
       <View style={ls.textBlock}>
         <Text style={ls.appName}>WealthWise</Text>
-        <Text style={ls.tagline}>Your money, managed smartly.</Text>
+        <Text style={ls.tagline}>Smart financial wellness</Text>
         <Text style={ls.description}>
-          Track every rupee, set smart goals, and get AI-powered insights — so
-          you always know where your money goes and how to grow it.
+          Track expenses, plan goals, grow wealth.
         </Text>
       </View>
 
       {/* Feature pills */}
       <View style={ls.pills}>
-        {["📊 Expense Tracking", "🎯 Goal Planning", "🤖 AI Insights"].map(
-          (label) => (
-            <View key={label} style={ls.pill}>
-              <Text style={ls.pillText}>{label}</Text>
-            </View>
-          ),
-        )}
+        {["Track", "Plan", "Grow"].map((label) => (
+          <View key={label} style={ls.pill}>
+            <Text style={ls.pillText}>{label}</Text>
+          </View>
+        ))}
       </View>
 
       {/* CTA */}
@@ -162,7 +148,7 @@ function LandingScreen({ onStart }: { onStart: () => void }) {
           onPress={onStart}
           style={{ width: SW - 56 }}
         />
-        <Text style={ls.ctaHint}>Takes about 3 minutes</Text>
+
       </View>
     </SafeAreaView>
   );
@@ -189,11 +175,11 @@ const ls = StyleSheet.create({
   blobBR: { bottom: -100, right: -80 },
   logoWrap: {
     marginBottom: 32,
-    shadowColor: "#00D09C",
+    shadowColor: "#FFFFFF",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 12,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   textBlock: {
     alignItems: "center",
@@ -209,7 +195,7 @@ const ls = StyleSheet.create({
   tagline: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#00D09C",
+    color: "#CCCCCC",
     marginBottom: 14,
     letterSpacing: 0.1,
   },
@@ -231,13 +217,13 @@ const ls = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: "#1A1A2E",
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#2A2A3E",
+    borderColor: "#444444",
   },
   pillText: {
     fontSize: 12.5,
-    color: "#C5C8CE",
+    color: "#AAAAAA",
     fontWeight: "500",
   },
   ctaBlock: {
