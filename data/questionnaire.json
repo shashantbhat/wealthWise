@@ -1,0 +1,130 @@
+{
+  "onboarding_questionnaire": [
+    {
+      "section": "Basic Profile",
+      "questions": [
+        {
+          "id": "age_group",
+          "question": "What is your age group?",
+          "type": "single_choice",
+          "options": ["<18", "18-25", "26-35", "36-45", "46+"]
+        },
+        {
+          "id": "occupation",
+          "question": "What is your occupation?",
+          "type": "single_choice",
+          "options": [
+            "Student",
+            "Salaried Employee",
+            "Self-employed",
+            "Business Owner",
+            "Freelancer",
+            "Other"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "Income",
+      "questions": [
+        {
+          "id": "monthly_income",
+          "question": "What is your monthly income (after tax)?",
+          "type": "number"
+        }
+      ]
+    },
+    {
+      "section": "Spending Habits",
+      "questions": [
+        {
+          "id": "payment_method",
+          "question": "What is your primary payment method?",
+          "type": "single_choice",
+          "options": ["Cash", "UPI", "Debit/Credit Card", "Mixed"]
+        }
+      ]
+    },
+    {
+      "section": "Savings",
+      "questions": [
+        {
+          "id": "monthly_savings_rate",
+          "question": "What percentage of your income do you save monthly?",
+          "type": "single_choice",
+          "options": ["0-10%", "10-20%", "20-30%", "30%+"]
+        }
+      ]
+    },
+    {
+      "section": "Investments",
+      "questions": [
+        {
+          "id": "investment_knowledge_level",
+          "question": "How familiar are you with investments?",
+          "type": "single_choice",
+          "options": ["Beginner", "Basic Knowledge", "Intermediate", "Advanced"]
+        }
+      ]
+    },
+    {
+      "section": "Financial Goals",
+      "questions": [
+        {
+          "id": "financial_goals",
+          "question": "What financial goals do you currently have?",
+          "type": "multiple_choice",
+          "options": [
+            "Buy a house",
+            "Buy a car",
+            "Education",
+            "Travel",
+            "Retirement",
+            "Business investment",
+            "Other"
+          ]
+        },
+        {
+          "id": "saving_for_goal",
+          "question": "Are you currently saving for this goal?",
+          "type": "single_choice",
+          "options": ["Yes", "No"]
+        }
+      ]
+    },
+    {
+      "section": "Savings & Investments",
+      "questions": [
+        {
+          "id": "current_savings_location",
+          "question": "Where do you keep most of your savings?",
+          "type": "multiple_choice",
+          "options": [
+            "Savings Account",
+            "Fixed Deposit",
+            "Mutual Funds",
+            "Stocks",
+            "Crypto",
+            "Gold",
+            "No Investments"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "Risk Appetite",
+      "questions": [
+        {
+          "id": "risk_preference",
+          "question": "What risk level do you prefer?",
+          "type": "single_choice",
+          "options": [
+            "Low risk, low return",
+            "Balanced risk and return",
+            "High risk, high return"
+          ]
+        }
+      ]
+    }
+  ]
+}
