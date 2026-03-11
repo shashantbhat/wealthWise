@@ -3,15 +3,201 @@ import investmentsData from "@/data/investments.json";
 import React, { useState } from "react";
 import {
   Dimensions,
+  Keyboard,
   Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+
+// ─── SIP Calculator data ──────────────────────────────────────────────────────
+const CALC_FUNDS = [
+  { id: "index",    name: "Index Funds",           icon: "trending-up-outline",      avgRate: 13,  color: "#4DABF7", risk: "Moderate" },
+  { id: "flexi",    name: "Flexi Cap Funds",        icon: "swap-horizontal-outline",   avgRate: 13,  color: "#A78BFA", risk: "Moderate-High" },
+  { id: "debt",     name: "Debt Funds",             icon: "shield-checkmark-outline",  avgRate: 7.5, color: "#52B788", risk: "Low" },
+  { id: "fd",       name: "Fixed Deposits",         icon: "lock-closed-outline",       avgRate: 6.5, color: "#F6C90E", risk: "Very Low" },
+  { id: "smallcap", name: "Small Cap Funds",        icon: "rocket-outline",            avgRate: 17,  color: "#FF6B6B", risk: "High" },
+  { id: "midcap",   name: "Mid Cap Funds",          icon: "bar-chart-outline",         avgRate: 15,  color: "#FD7E14", risk: "Moderate-High" },
+  { id: "largecap", name: "Large Cap Funds",        icon: "business-outline",          avgRate: 12,  color: "#20C997", risk: "Low-Moderate" },
+  { id: "emerging", name: "Emerging Market Funds",  icon: "globe-outline",             avgRate: 13,  color: "#E83E8C", risk: "High" },
+  { id: "hybrid",   name: "Hybrid Funds",           icon: "git-merge-outline",         avgRate: 11,  color: "#FF8C00", risk: "Moderate" },
+];
+
+function calcSIP(p: number, rate: number, years: number) {
+  if (!p || !years || !rate) return 0;
+  const r = rate / 100 / 12, n = years * 12;
+  return p * ((Math.pow(1 + r, n) - 1) / r) * (1 + r);
+}
+function calcLump(p: number, rate: number, years: number) {
+  if (!p || !years || !rate) return 0;
+  return p * Math.pow(1 + rate / 100, years);
+}
+function fmtAmt(v: number) {
+  if (v >= 1e7) return `₹${(v / 1e7).toFixed(2)} Cr`;
+  if (v >= 1e5) return `₹${(v / 1e5).toFixed(2)} L`;
+  return `₹${Math.round(v).toLocaleString("en-IN")}`;
+}
+
+function SIPCalculator() {
+  const [mode, setMode] = useState<"sip" | "lump">("sip");
+  const [amount, setAmount] = useState("");
+  const [years, setYears] = useState("");
+  const [fundId, setFundId] = useState("index");
+  const [open, setOpen] = useState(false);
+
+  const fund = CALC_FUNDS.find((f) => f.id === fundId)!;
+  const amt = parseFloat(amount.replace(/,/g, "")) || 0;
+  const yrs = parseFloat(years) || 0;
+  const fv = mode === "sip" ? calcSIP(amt, fund.avgRate, yrs) : calcLump(amt, fund.avgRate, yrs);
+  const invested = mode === "sip" ? amt * yrs * 12 : amt;
+  const gains = fv - invested;
+  const hasResult = amt > 0 && yrs > 0;
+
+  return (
+    <View style={calcS.card}>
+      <View style={calcS.titleRow}>
+        <Ionicons name="calculator" size={19} color="#FF8C00" />
+        <Text style={calcS.title}>Investment Calculator</Text>
+      </View>
+
+      {/* SIP / Lump Sum toggle */}
+      <View style={calcS.toggle}>
+        <TouchableOpacity style={[calcS.tBtn, mode === "sip" && calcS.tOn]} onPress={() => setMode("sip")}>
+          <Text style={[calcS.tTxt, mode === "sip" && calcS.tOnTxt]}>Monthly SIP</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[calcS.tBtn, mode === "lump" && calcS.tOn]} onPress={() => setMode("lump")}>
+          <Text style={[calcS.tTxt, mode === "lump" && calcS.tOnTxt]}>Lump Sum</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Amount */}
+      <Text style={calcS.label}>{mode === "sip" ? "Monthly SIP Amount" : "Lump Sum Amount"}</Text>
+      <View style={calcS.inputRow}>
+        <Text style={calcS.prefix}>₹</Text>
+        <TextInput
+          style={calcS.input}
+          keyboardType="numeric"
+          placeholder={mode === "sip" ? "5,000" : "1,00,000"}
+          placeholderTextColor="#BBB"
+          value={amount}
+          onChangeText={setAmount}
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
+        />
+      </View>
+
+      {/* Instrument */}
+      <Text style={[calcS.label, { marginTop: 12 }]}>Instrument</Text>
+      <TouchableOpacity style={[calcS.selector, { borderColor: fund.color + "88" }]} onPress={() => setOpen((v) => !v)} activeOpacity={0.85}>
+        <View style={[calcS.sIcon, { backgroundColor: fund.color + "22" }]}>
+          <Ionicons name={fund.icon as React.ComponentProps<typeof Ionicons>["name"]} size={15} color={fund.color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[calcS.sName, { color: fund.color }]}>{fund.name}</Text>
+          <Text style={calcS.sRate}>~{fund.avgRate}% avg · {fund.risk} risk</Text>
+        </View>
+        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={15} color="#AAA" />
+      </TouchableOpacity>
+
+      {open && (
+        <View style={calcS.dropdown}>
+          {CALC_FUNDS.map((f) => (
+            <TouchableOpacity
+              key={f.id}
+              style={[calcS.ddRow, f.id === fundId && { backgroundColor: f.color + "15" }]}
+              onPress={() => { setFundId(f.id); setOpen(false); }}
+              activeOpacity={0.8}
+            >
+              <View style={[calcS.ddIcon, { backgroundColor: f.color + "22" }]}>
+                <Ionicons name={f.icon as React.ComponentProps<typeof Ionicons>["name"]} size={13} color={f.color} />
+              </View>
+              <Text style={calcS.ddName}>{f.name}</Text>
+              <Text style={[calcS.ddRate, { color: f.color }]}>~{f.avgRate}%</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* Years */}
+      <Text style={[calcS.label, { marginTop: 12 }]}>Time Horizon</Text>
+      <View style={calcS.inputRow}>
+        <TextInput
+          style={[calcS.input, { flex: 1 }]}
+          keyboardType="numeric"
+          placeholder="10"
+          placeholderTextColor="#BBB"
+          value={years}
+          onChangeText={setYears}
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
+        />
+        <Text style={calcS.suffix}>years</Text>
+      </View>
+
+      {/* Result */}
+      {hasResult ? (
+        <View style={[calcS.result, { borderColor: fund.color + "55", backgroundColor: fund.color + "0D" }]}>
+          <Text style={calcS.resultSub}>
+            {mode === "sip" ? `₹${amt.toLocaleString("en-IN")}/mo` : `₹${amt.toLocaleString("en-IN")} lumpsum`}{" "}
+            in {fund.name} for {yrs}y
+          </Text>
+          <Text style={[calcS.resultAmt, { color: fund.color }]}>{fmtAmt(fv)}</Text>
+          <View style={calcS.grid}>
+            <View style={calcS.cell}><Text style={calcS.cellL}>Invested</Text><Text style={calcS.cellV}>{fmtAmt(invested)}</Text></View>
+            <View style={calcS.vline} />
+            <View style={calcS.cell}><Text style={calcS.cellL}>Est. Gains</Text><Text style={[calcS.cellV, { color: "#00C853" }]}>{fmtAmt(gains)}</Text></View>
+            <View style={calcS.vline} />
+            <View style={calcS.cell}><Text style={calcS.cellL}>Returns</Text><Text style={[calcS.cellV, { color: "#00C853" }]}>{invested > 0 ? `${((gains / invested) * 100).toFixed(0)}%` : "--"}</Text></View>
+          </View>
+        </View>
+      ) : (
+        <View style={calcS.empty}>
+          <Text style={calcS.emptyTxt}>Enter amount, pick an instrument & time horizon</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const calcS = StyleSheet.create({
+  card: { backgroundColor: "#FFF", borderRadius: 20, borderWidth: 1.5, borderColor: "rgba(255,140,0,0.35)", padding: 18, marginBottom: 20, shadowColor: "#FF8C00", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
+  title: { fontSize: 16, fontWeight: "800", color: "#1A1A1A" },
+  toggle: { flexDirection: "row", backgroundColor: "#F4F4F4", borderRadius: 10, padding: 3, marginBottom: 14 },
+  tBtn: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: "center" },
+  tOn: { backgroundColor: "#FF8C00" },
+  tTxt: { fontSize: 13, fontWeight: "600", color: "#999" },
+  tOnTxt: { color: "#FFF" },
+  label: { fontSize: 10, fontWeight: "700", color: "#AAA", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 },
+  inputRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#F7F7F7", borderRadius: 12, borderWidth: 1, borderColor: "#E8E8E8", paddingHorizontal: 14, paddingVertical: 11 },
+  prefix: { fontSize: 17, fontWeight: "700", color: "#FF8C00", marginRight: 4 },
+  suffix: { fontSize: 14, color: "#AAA", marginLeft: 6 },
+  input: { flex: 1, fontSize: 17, fontWeight: "600", color: "#1A1A1A", padding: 0 },
+  selector: { flexDirection: "row", alignItems: "center", backgroundColor: "#F7F7F7", borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
+  sIcon: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  sName: { fontSize: 14, fontWeight: "700" },
+  sRate: { fontSize: 11, color: "#AAA", marginTop: 1 },
+  dropdown: { marginTop: 4, backgroundColor: "#FFF", borderRadius: 14, borderWidth: 1, borderColor: "#EEE", overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  ddRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#F0F0F0" },
+  ddIcon: { width: 26, height: 26, borderRadius: 7, alignItems: "center", justifyContent: "center" },
+  ddName: { flex: 1, fontSize: 13, color: "#1A1A1A", fontWeight: "600" },
+  ddRate: { fontSize: 12, fontWeight: "700" },
+  result: { borderRadius: 14, borderWidth: 1, padding: 14, marginTop: 14 },
+  resultSub: { fontSize: 11, color: "#AAA", marginBottom: 2 },
+  resultAmt: { fontSize: 32, fontWeight: "800", marginBottom: 12 },
+  grid: { flexDirection: "row" },
+  cell: { flex: 1, alignItems: "center" },
+  cellL: { fontSize: 10, color: "#AAA", marginBottom: 3 },
+  cellV: { fontSize: 13, fontWeight: "700", color: "#1A1A1A" },
+  vline: { width: 1, backgroundColor: "#EEE", marginHorizontal: 6 },
+  empty: { padding: 16, alignItems: "center", borderRadius: 12, borderWidth: 1, borderStyle: "dashed", borderColor: "#DDD", marginTop: 14 },
+  emptyTxt: { fontSize: 13, color: "#BBB", textAlign: "center" },
+});
 
 const { width: SW } = Dimensions.get("window");
 
@@ -484,6 +670,9 @@ export default function InvestmentsScreen() {
           <Text style={styles.headerTitle}>Investments</Text>
           <Text style={styles.headerSub}>Your guide to growing wealth</Text>
         </View>
+
+        {/* Calculator */}
+        <SIPCalculator />
 
         {/* Quick legend */}
         <View style={styles.legendRow}>

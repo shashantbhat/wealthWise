@@ -27,6 +27,8 @@ const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Ionicons>["name
   Shopping: "bag-outline",
   Health: "medical-outline",
   Entertainment: "film-outline",
+  Accommodation: "home-outline",
+  Wellness: "fitness-outline",
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -142,6 +144,8 @@ export default function HomeScreen() {
     Shopping: 4000,
     Health: 2000,
     Entertainment: 2000,
+    Accommodation: 8000,
+    Wellness: 1500,
     Other: 1000,
   });
   const [budgetInputs, setBudgetInputs] = useState<Record<string, string>>({
@@ -150,6 +154,8 @@ export default function HomeScreen() {
     Shopping: "4000",
     Health: "2000",
     Entertainment: "2000",
+    Accommodation: "8000",
+    Wellness: "1500",
     Other: "1000",
   });
 
@@ -248,6 +254,8 @@ export default function HomeScreen() {
     "Shopping",
     "Health",
     "Entertainment",
+    "Accommodation",
+    "Wellness",
     "Other",
   ];
 
