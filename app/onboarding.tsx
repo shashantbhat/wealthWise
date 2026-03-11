@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/context/user-context";
 import questionnaireData from "@/data/questionnaire.json";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -15,7 +17,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
+import Svg, { Rect } from "react-native-svg";
 
 const { width: SW } = Dimensions.get("window");
 
@@ -60,6 +69,7 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [inputValue, setInputValue] = useState("");
   const router = useRouter();
+  const { setAnswers: saveAnswersToContext, setProfile } = useUser();
 
   function handleAnswer(id: string, value: AnswerValue) {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -67,15 +77,28 @@ export default function Onboarding() {
 
   function handleNext() {
     const q = ALL_QUESTIONS[currentIndex];
+    let updatedAnswers = { ...answers };
 
     // Commit text / number inputs into answers map
     if (q.type === "number" || q.type === "text") {
       const value =
         q.type === "number" ? Number(inputValue) : inputValue.trim();
+      updatedAnswers[q.id] = value;
       handleAnswer(q.id, value);
     }
 
     if (currentIndex === TOTAL - 1) {
+      // Save answers to context before navigating
+      saveAnswersToContext(updatedAnswers);
+      // Update profile with the entered name
+      setProfile({
+        name: (updatedAnswers.user_name as string) || "User",
+        persona: (updatedAnswers.occupation as string) || "Student",
+        monthlyIncome: (updatedAnswers.monthly_income as number) || 0,
+        salaryDay: 1,
+        riskLevel: "Moderate",
+        baseCurrency: "INR",
+      });
       // Onboarding complete — replace so user can't swipe back into it
       router.replace("/(tabs)");
     } else {
@@ -103,36 +126,92 @@ export default function Onboarding() {
 // ─── Landing Screen ───────────────────────────────────────────────────────────
 
 function LandingScreen({ onStart }: { onStart: () => void }) {
+  const buttonScale = useSharedValue(1);
+
+  // Blob animations
+  const blob1Y = useSharedValue(-80);
+  const blob2Y = useSharedValue(-120);
+
+  React.useEffect(() => {
+    // Animate blob 1
+    blob1Y.value = withRepeat(
+      withTiming(-60, {
+        duration: 8000,
+        easing: Easing.inOut(Easing.sin),
+      }),
+      -1,
+      true,
+    );
+
+    // Animate blob 2
+    blob2Y.value = withRepeat(
+      withTiming(-100, {
+        duration: 9000,
+        easing: Easing.inOut(Easing.sin),
+      }),
+      -1,
+      true,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const blob1Style = useAnimatedStyle(() => ({
+    top: blob1Y.value,
+  }));
+
+  const blob2Style = useAnimatedStyle(() => ({
+    bottom: blob2Y.value,
+  }));
+
+  const handlePress = () => {
+    buttonScale.value = withTiming(0.98, { duration: 100 }, () => {
+      buttonScale.value = withTiming(1, { duration: 100 });
+    });
+    setTimeout(() => onStart(), 50);
+  };
+
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }));
+
   return (
     <SafeAreaView style={ls.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D0D1A" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
-      {/* Logo */}
+      {/* Animated Gradient Background */}
+      <LinearGradient
+        colors={["#F5F3F0", "#FAFAF8", "#F0EAEA"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={ls.gradientBg}
+      />
+
+  
+
+      {/* Logo with Glassmorphic Background */}
       <View style={ls.logoWrap}>
-        <Svg width={80} height={80} viewBox="0 0 80 80">
-          <Circle cx={40} cy={40} r={40} fill="#FFFFFF" opacity={0.05} />
-          {/* Minimal line chart uptrend */}
-          <Path
-            d="M20 50 L35 35 L50 42 L65 20"
-            stroke="#FFFFFF"
-            strokeWidth={3}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
+        <View style={ls.logoGlassBg}>
+          <Svg width={90} height={90} viewBox="0 0 90 90">
+            {/* Bar 1 - Small */}
+            <Rect x={15} y={50} width={12} height={25} fill="#FF8C00" rx={3} />
+            {/* Bar 2 - Medium */}
+            <Rect x={40} y={35} width={12} height={40} fill="#FFB347" rx={3} />
+            {/* Bar 3 - Large */}
+            <Rect x={65} y={15} width={12} height={60} fill="#FFAA1D" rx={3} />
+          </Svg>
+        </View>
       </View>
 
       {/* App name & tagline */}
       <View style={ls.textBlock}>
         <Text style={ls.appName}>WealthWise</Text>
-        <Text style={ls.tagline}>Smart financial wellness</Text>
+        <Text style={ls.tagline}>Your wealth, simplified</Text>
         <Text style={ls.description}>
-          Track expenses, plan goals, grow wealth.
+          Clear answers, conscious decisions, confident results.
         </Text>
       </View>
 
-      {/* Feature pills */}
+      {/* Feature pills - Glassmorphic */}
       <View style={ls.pills}>
         {["Track", "Plan", "Grow"].map((label) => (
           <View key={label} style={ls.pill}>
@@ -141,14 +220,24 @@ function LandingScreen({ onStart }: { onStart: () => void }) {
         ))}
       </View>
 
-      {/* CTA */}
+      {/* CTA - Animated with Gradient */}
       <View style={ls.ctaBlock}>
-        <Button
-          text="Get Started"
-          onPress={onStart}
-          style={{ width: SW - 56 }}
-        />
-
+        <Animated.View style={[buttonAnimatedStyle, { width: SW - 56 }]}>
+          <LinearGradient
+            colors={["#FF8C00", "#FFB84D"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={ls.ctaGradient}
+          >
+            <TouchableOpacity
+              style={ls.ctaButton}
+              onPress={handlePress}
+              activeOpacity={1}
+            >
+              <Text style={ls.ctaText}>Get Started</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -157,82 +246,138 @@ function LandingScreen({ onStart }: { onStart: () => void }) {
 const ls = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0D0D1A",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,
     overflow: "hidden",
+    backgroundColor: "#F5F3F0",
   },
-  blob: {
+  gradientBg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  blob1: {
+    position: "absolute",
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: "#1B2B5F",
+    top: -80,
+    left: -100,
+    zIndex: 1,
+  },
+  blob2: {
     position: "absolute",
     width: 300,
     height: 300,
     borderRadius: 150,
-    opacity: 0.07,
-    backgroundColor: "#00D09C",
+    backgroundColor: "#D4A574",
+    bottom: -120,
+    right: -80,
+    zIndex: 1,
   },
-  blobTL: { top: -100, left: -80 },
-  blobBR: { bottom: -100, right: -80 },
   logoWrap: {
     marginBottom: 32,
-    shadowColor: "#FFFFFF",
+    zIndex: 10,
+    shadowColor: "#FF8C00",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 4,
+  },
+  logoGlassBg: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 0.5,
+    borderColor: "rgba(255, 255, 255, 0.6)",
+    backdropFilter: "blur(30px)",
   },
   textBlock: {
     alignItems: "center",
     marginBottom: 28,
+    zIndex: 10,
   },
   appName: {
-    fontSize: 38,
+    fontSize: 42,
     fontWeight: "800",
-    color: "#EDEDED",
+    color: "#1A1A1A",
     letterSpacing: -0.8,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   tagline: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#CCCCCC",
-    marginBottom: 14,
-    letterSpacing: 0.1,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FF8C00",
+    marginBottom: 12,
+    letterSpacing: 0.2,
   },
   description: {
-    fontSize: 14.5,
-    lineHeight: 22,
-    color: "#9BA1A6",
+    fontSize: 15,
+    lineHeight: 24,
+    color: "#666666",
     textAlign: "center",
-    maxWidth: 310,
+    maxWidth: 320,
+    fontWeight: "500",
   },
   pills: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: 8,
-    marginBottom: 44,
+    gap: 10,
+    marginBottom: 48,
+    zIndex: 10,
   },
   pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#444444",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255, 255, 255, 0.6)",
   },
   pillText: {
-    fontSize: 12.5,
-    color: "#AAAAAA",
-    fontWeight: "500",
+    fontSize: 13,
+    color: "#1A1A1A",
+    fontWeight: "600",
+    letterSpacing: 0.1,
   },
   ctaBlock: {
     alignItems: "center",
     gap: 12,
+    zIndex: 10,
+  },
+  ctaGradient: {
+    borderRadius: 14,
+    overflow: "hidden",
+    shadowColor: "#FF8C00",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  ctaButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ctaText: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.2,
   },
   ctaHint: {
     fontSize: 12.5,
-    color: "#5A5A6E",
+    color: "#999999",
   },
 });
 
@@ -348,7 +493,7 @@ function QuestionnaireScreen({
           value={inputValue}
           onChangeText={onInputChange}
           placeholder={isNumber ? "0" : "Type your answer here…"}
-          placeholderTextColor="#4A4A5E"
+          placeholderTextColor="#999999"
           keyboardType={isNumber ? "numeric" : "default"}
           multiline={question.type === "text"}
           numberOfLines={question.type === "text" ? 4 : 1}
@@ -377,7 +522,7 @@ function QuestionnaireScreen({
 
   return (
     <SafeAreaView style={qs.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D0D1A" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
       {/* ── Header ── */}
       <View style={qs.header}>
@@ -440,7 +585,7 @@ function QuestionnaireScreen({
 const qs = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0D0D1A",
+    backgroundColor: "#F5F3F0",
   },
   flex: {
     flex: 1,
@@ -462,14 +607,14 @@ const qs = StyleSheet.create({
   sectionLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#00D09C",
+    color: "#FF8C00",
     letterSpacing: 1.8,
     marginBottom: 3,
   },
   sectionName: {
     fontSize: 19,
     fontWeight: "700",
-    color: "#EDEDED",
+    color: "#1A1A1A",
     letterSpacing: -0.3,
   },
   progressCounter: {
@@ -479,7 +624,7 @@ const qs = StyleSheet.create({
   progressCurrent: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#00D09C",
+    color: "#FF8C00",
   },
   progressSep: {
     fontSize: 14,
@@ -494,14 +639,14 @@ const qs = StyleSheet.create({
   // ── Progress bar ─────────────────────────────────────────────────────────────
   progressTrack: {
     height: 8,
-    backgroundColor: "#1F1F2E",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     marginHorizontal: 24,
     borderRadius: 4,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#00D09C",
+    backgroundColor: "#FF8C00",
     borderRadius: 4,
   },
 
@@ -520,13 +665,13 @@ const qs = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: "#00D09C18",
+    backgroundColor: "rgba(255, 140, 0, 0.1)",
     marginBottom: 12,
   },
   hintBadgeText: {
     fontSize: 11.5,
     fontWeight: "600",
-    color: "#00D09C",
+    color: "#FF8C00",
     letterSpacing: 0.2,
   },
 
@@ -534,7 +679,7 @@ const qs = StyleSheet.create({
   questionText: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#EDEDED",
+    color: "#1A1A1A",
     lineHeight: 31,
     marginBottom: 24,
     letterSpacing: -0.3,
@@ -551,23 +696,23 @@ const qs = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 15,
     borderRadius: 14,
-    backgroundColor: "#1A1A2E",
-    borderWidth: 1.5,
-    borderColor: "#2A2A3E",
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255, 255, 255, 0.5)",
   },
   optCardActive: {
-    backgroundColor: "#00D09C12",
-    borderColor: "#00D09C",
+    backgroundColor: "rgba(255, 140, 0, 0.1)",
+    borderColor: "#FF8C00",
   },
   optText: {
     flex: 1,
     fontSize: 15,
     fontWeight: "500",
-    color: "#C5C8CE",
+    color: "#666666",
     marginRight: 12,
   },
   optTextActive: {
-    color: "#00D09C",
+    color: "#FF8C00",
     fontWeight: "600",
   },
 
@@ -577,19 +722,19 @@ const qs = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#3A3A5E",
+    borderColor: "#FF8C00",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   radioActive: {
-    borderColor: "#00D09C",
+    borderColor: "#FF8C00",
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#00D09C",
+    backgroundColor: "#FF8C00",
   },
 
   // ── Checkbox indicator ────────────────────────────────────────────────────────
@@ -598,19 +743,19 @@ const qs = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#3A3A5E",
+    borderColor: "#FF8C00",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   checkboxActive: {
-    backgroundColor: "#00D09C",
-    borderColor: "#00D09C",
+    backgroundColor: "#FF8C00",
+    borderColor: "#FF8C00",
   },
   checkmark: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#0D0D1A",
+    color: "#FFFFFF",
     lineHeight: 15,
   },
 
@@ -618,9 +763,9 @@ const qs = StyleSheet.create({
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1A1A2E",
-    borderWidth: 1.5,
-    borderColor: "#2A2A3E",
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255, 255, 255, 0.5)",
     borderRadius: 14,
     overflow: "hidden",
     minHeight: 56,
@@ -629,12 +774,12 @@ const qs = StyleSheet.create({
     paddingLeft: 18,
     fontSize: 18,
     fontWeight: "600",
-    color: "#00D09C",
+    color: "#FF8C00",
   },
   input: {
     flex: 1,
     fontSize: 15,
-    color: "#EDEDED",
+    color: "#1A1A1A",
     paddingHorizontal: 18,
     paddingVertical: 16,
   },
@@ -647,7 +792,7 @@ const qs = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: Platform.OS === "ios" ? 12 : 20,
-    backgroundColor: "#0D0D1A",
+    backgroundColor: "#F5F3F0",
   },
   footerBtn: {
     width: "100%",

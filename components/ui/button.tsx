@@ -44,7 +44,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === "primary" ? "#0D0D1A" : "#00D09C"}
+          color={variant === "primary" ? "#FFFFFF" : "#FF8C00"}
           size="small"
         />
       ) : (
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     minHeight: 54,
   },
   primary: {
-    backgroundColor: "#00D09C",
+    backgroundColor: "#FF8C00",
   },
   secondary: {
     backgroundColor: "#1A1A2E",

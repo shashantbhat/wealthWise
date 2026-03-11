@@ -1,8 +1,13 @@
 {
   "onboarding_questionnaire": [
     {
-      "section": "Basic Profile",
+      "section": "Profile",
       "questions": [
+        {
+          "id": "user_name",
+          "question": "What's your name?",
+          "type": "text"
+        },
         {
           "id": "age_group",
           "question": "What is your age group?",

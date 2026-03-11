@@ -1,3 +1,8 @@
+import {
+    adjustGoalProgress,
+    calculateFutureValue,
+    calculateRequiredSIP,
+} from "@/app/utils/goalCalculator";
 import { Button } from "@/components/ui/button";
 import React, { useState } from "react";
 import {
@@ -19,10 +24,11 @@ interface Goal {
   name: string;
   targetAmount: number;
   timeHorizon: number; // in years
-  currentLumpsum: number;
+  currentCorpus: number; // initial investment
   monthlySIP: number;
+  expectedReturn: number; // expected annual return
   investmentOptions: InvestmentOption[];
-  yearlyUpdates: YearlyUpdate[];
+  history: HistoryEntry[];
   createdAt: Date;
 }
 
@@ -33,11 +39,11 @@ interface InvestmentOption {
   monthlySIP?: number; // calculated SIP amount
 }
 
-interface YearlyUpdate {
+interface HistoryEntry {
   year: number;
   portfolioValue: number;
-  lumpsumAdded: number;
-  sipReduced: boolean;
+  extraAdded: number;
+  actualReturn: number; // actual annual return
   notes?: string;
 }
 
@@ -63,38 +69,17 @@ export default function GoalsScreen() {
   const [goalName, setGoalName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
   const [timeHorizon, setTimeHorizon] = useState("");
-  const [currentLumpsum, setCurrentLumpsum] = useState("");
+  const [initialCorpus, setInitialCorpus] = useState("");
+  const [expectedReturn, setExpectedReturn] = useState("12");
 
   // Form states for yearly updates
   const [portfolioValue, setPortfolioValue] = useState("");
-  const [lumpsumAdded, setLumpsumAdded] = useState("");
+  const [extraAdded, setExtraAdded] = useState("");
+  const [actualReturn, setActualReturn] = useState("");
   const [updateNotes, setUpdateNotes] = useState("");
-  const [reduceSIP, setReduceSIP] = useState(false);
 
   const formatINR = (amount: number) => {
     return "₹" + amount.toLocaleString("en-IN");
-  };
-
-  const calculateSIP = (
-    targetAmount: number,
-    timeHorizon: number,
-    currentLumpsum: number,
-    expectedReturn: number,
-  ): number => {
-    const monthlyRate = expectedReturn / 100 / 12;
-    const months = timeHorizon * 12;
-
-    // Future value of current lumpsum
-    const fvLumpsum = currentLumpsum * Math.pow(1 + monthlyRate, months);
-
-    // Required monthly SIP to reach target
-    const requiredFV = targetAmount - fvLumpsum;
-
-    if (requiredFV <= 0) return 0;
-
-    const sip =
-      (requiredFV * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
-    return Math.ceil(sip);
   };
 
   const createGoal = () => {
@@ -105,17 +90,23 @@ export default function GoalsScreen() {
 
     const target = parseFloat(targetAmount);
     const horizon = parseInt(timeHorizon);
-    const lumpsum = parseFloat(currentLumpsum) || 0;
+    const corpus = parseFloat(initialCorpus) || 0;
+    const expectedReturnRate = parseFloat(expectedReturn) || 12;
 
     if (target <= 0 || horizon <= 0) {
       Alert.alert("Error", "Please enter valid amounts and time horizon");
       return;
     }
 
-    // Calculate SIP for each investment option
+    // Calculate SIP for each investment option using the new formula
     const optionsWithSIP = INVESTMENT_OPTIONS.map((option) => ({
       ...option,
-      monthlySIP: calculateSIP(target, horizon, lumpsum, option.expectedReturn),
+      monthlySIP: calculateRequiredSIP({
+        targetAmount: target,
+        years: horizon,
+        expectedReturn: option.expectedReturn,
+        initialLumpSum: corpus,
+      }),
     }));
 
     const newGoal: Goal = {
@@ -123,10 +114,11 @@ export default function GoalsScreen() {
       name: goalName,
       targetAmount: target,
       timeHorizon: horizon,
-      currentLumpsum: lumpsum,
-      monthlySIP: Math.min(...optionsWithSIP.map((opt) => opt.monthlySIP)),
+      currentCorpus: corpus,
+      expectedReturn: expectedReturnRate,
+      monthlySIP: Math.min(...optionsWithSIP.map((opt) => opt.monthlySIP || 0)),
       investmentOptions: optionsWithSIP,
-      yearlyUpdates: [],
+      history: [],
       createdAt: new Date(),
     };
 
@@ -136,55 +128,71 @@ export default function GoalsScreen() {
   };
 
   const addYearlyUpdate = () => {
-    if (!selectedGoal || !portfolioValue) {
-      Alert.alert("Error", "Please enter portfolio value");
+    if (!selectedGoal || !portfolioValue || !actualReturn) {
+      Alert.alert("Error", "Please enter portfolio value and actual return");
       return;
     }
 
-    const value = parseFloat(portfolioValue);
-    const lumpsum = parseFloat(lumpsumAdded) || 0;
+    const portfolio = parseFloat(portfolioValue);
+    const extra = parseFloat(extraAdded) || 0;
+    const actualReturnRate = parseFloat(actualReturn);
 
-    if (value < 0) {
+    if (portfolio < 0) {
       Alert.alert("Error", "Portfolio value cannot be negative");
       return;
     }
 
-    const update: YearlyUpdate = {
-      year: selectedGoal.yearlyUpdates.length + 1,
-      portfolioValue: value,
-      lumpsumAdded: lumpsum,
-      sipReduced: reduceSIP,
+    if (actualReturnRate < -100) {
+      Alert.alert("Error", "Return cannot be less than -100%");
+      return;
+    }
+
+    const year = selectedGoal.history.length + 1;
+    const remainingYears = selectedGoal.timeHorizon - year;
+
+    // Create history entry
+    const historyEntry: HistoryEntry = {
+      year,
+      portfolioValue: portfolio,
+      extraAdded: extra,
+      actualReturn: actualReturnRate,
       notes: updateNotes,
     };
 
-    const updatedGoal = {
+    let updatedGoal = {
       ...selectedGoal,
-      yearlyUpdates: [...selectedGoal.yearlyUpdates, update],
+      history: [...selectedGoal.history, historyEntry],
     };
 
-    // Recalculate SIP if lumpsum was added or SIP was reduced
-    if (lumpsum > 0 || reduceSIP) {
-      const remainingAmount = selectedGoal.targetAmount - value;
-      const remainingYears = selectedGoal.timeHorizon - update.year;
+    // Recalculate SIP for remaining years using adjustGoalProgress
+    if (remainingYears > 0 && portfolio > 0) {
+      const adjustment = adjustGoalProgress({
+        currentCorpus: portfolio,
+        extraSavings: extra,
+        actualYearlyReturn: actualReturnRate,
+        remainingYears,
+        finalTarget: selectedGoal.targetAmount,
+      });
 
-      if (remainingYears > 0 && remainingAmount > 0) {
-        updatedGoal.investmentOptions = updatedGoal.investmentOptions.map(
-          (option) => ({
-            ...option,
-            monthlySIP: calculateSIP(
-              remainingAmount,
-              remainingYears,
-              lumpsum,
-              option.expectedReturn,
-            ),
+      // Update investment options with new SIP amounts
+      updatedGoal.investmentOptions = updatedGoal.investmentOptions.map(
+        (option) => ({
+          ...option,
+          monthlySIP: calculateRequiredSIP({
+            targetAmount: selectedGoal.targetAmount,
+            years: remainingYears,
+            expectedReturn: option.expectedReturn,
+            initialLumpSum: adjustment.updatedCorpus,
           }),
-        );
-        updatedGoal.monthlySIP = Math.min(
-          ...updatedGoal.investmentOptions
-            .map((opt) => opt.monthlySIP || 0)
-            .filter((sip) => sip > 0),
-        );
-      }
+        }),
+      );
+
+      updatedGoal.monthlySIP = Math.min(
+        ...updatedGoal.investmentOptions
+          .map((opt) => opt.monthlySIP || 0)
+          .filter((sip) => sip > 0),
+      );
+      updatedGoal.currentCorpus = adjustment.updatedCorpus;
     }
 
     setGoals((prev) =>
@@ -193,26 +201,36 @@ export default function GoalsScreen() {
     setSelectedGoal(updatedGoal);
     resetUpdateForm();
     setShowUpdateModal(false);
+
+    Alert.alert(
+      "Success",
+      `Year ${year} update recorded. ${
+        remainingYears > 0
+          ? `New monthly SIP: ${formatINR(updatedGoal.monthlySIP)}`
+          : ""
+      }`,
+    );
   };
 
   const resetForm = () => {
     setGoalName("");
     setTargetAmount("");
     setTimeHorizon("");
-    setCurrentLumpsum("");
+    setInitialCorpus("");
+    setExpectedReturn("12");
   };
 
   const resetUpdateForm = () => {
     setPortfolioValue("");
-    setLumpsumAdded("");
+    setExtraAdded("");
+    setActualReturn("");
     setUpdateNotes("");
-    setReduceSIP(false);
   };
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
       case "Low":
-        return "#00D09C";
+        return "#FF8C00";
       case "Medium":
         return "#FFB347";
       case "High":
@@ -222,52 +240,97 @@ export default function GoalsScreen() {
     }
   };
 
-  const renderGoalCard = ({ item }: { item: Goal }) => (
-    <TouchableOpacity
-      style={styles.goalCard}
-      onPress={() => {
-        setSelectedGoal(item);
-        setShowUpdateModal(true);
-      }}
-    >
-      <View style={styles.goalHeader}>
-        <Text style={styles.goalName}>{item.name}</Text>
-        <Text style={styles.goalTarget}>{formatINR(item.targetAmount)}</Text>
-      </View>
+  const getPerformanceStatus = (goal: Goal): { label: string; color: string } => {
+    if (goal.history.length === 0) return { label: "On Track", color: "#FF8C00" };
+    const latest = goal.history[goal.history.length - 1];
+    const diff = latest.actualReturn - goal.expectedReturn;
+    if (diff > 0.5) return { label: "Outperforming", color: "#00C853" };
+    if (diff < -0.5) return { label: "Underperforming", color: "#FF6B6B" };
+    return { label: "On Track", color: "#FF8C00" };
+  };
 
-      <View style={styles.goalDetails}>
-        <Text style={styles.goalDetail}>Time: {item.timeHorizon} years</Text>
-        <Text style={styles.goalDetail}>
-          Monthly SIP: {formatINR(item.monthlySIP)}
-        </Text>
-        {item.currentLumpsum > 0 && (
-          <Text style={styles.goalDetail}>
-            Lumpsum: {formatINR(item.currentLumpsum)}
-          </Text>
-        )}
-      </View>
+  const renderGoalCard = ({ item }: { item: Goal }) => {
+    // Calculate progress percentage based on current corpus vs target
+    const progressPercentage = (item.currentCorpus / item.targetAmount) * 100;
 
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>
-          Progress: {item.yearlyUpdates.length}/{item.timeHorizon} years
-        </Text>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${(item.yearlyUpdates.length / item.timeHorizon) * 100}%`,
-              },
-            ]}
-          />
+    // Project final value based on current SIP and expected return
+    const monthsRemaining = (item.timeHorizon - item.history.length) * 12;
+    const projectedValue =
+      monthsRemaining > 0
+        ? calculateFutureValue(
+            item.monthlySIP,
+            monthsRemaining,
+            item.expectedReturn,
+            item.currentCorpus,
+          )
+        : item.currentCorpus;
+
+    const performance = getPerformanceStatus(item);
+
+    return (
+      <TouchableOpacity
+        style={styles.goalCard}
+        onPress={() => {
+          setSelectedGoal(item);
+          setShowUpdateModal(true);
+        }}
+      >
+        <View style={styles.goalHeader}>
+          <Text style={styles.goalName}>{item.name}</Text>
+          <View style={{ alignItems: "flex-end", gap: 4 }}>
+            <Text style={styles.goalTarget}>{formatINR(item.targetAmount)}</Text>
+            <View style={[styles.performanceBadge, { backgroundColor: performance.color + "22", borderColor: performance.color + "66" }]}>
+              <View style={[styles.performanceDot, { backgroundColor: performance.color }]} />
+              <Text style={[styles.performanceBadgeText, { color: performance.color }]}>
+                {performance.label}
+              </Text>
+            </View>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+
+        <View style={styles.goalDetails}>
+          <Text style={styles.goalDetail}>Time: {item.timeHorizon} years</Text>
+          <Text style={styles.goalDetail}>
+            Monthly SIP: {formatINR(item.monthlySIP)}
+          </Text>
+          <Text style={styles.goalDetail}>
+            Current Corpus: {formatINR(item.currentCorpus)}
+          </Text>
+          <Text style={styles.goalDetail}>
+            Expected Return: {item.expectedReturn}% p.a.
+          </Text>
+          {projectedValue >= item.targetAmount && (
+            <Text style={[styles.goalDetail, { color: "#FF8C00" }]}>
+              ✓ On Track
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.progressContainer}>
+          <Text style={styles.progressText}>
+            Progress: {item.history.length}/{item.timeHorizon} years
+          </Text>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${Math.min(progressPercentage, 100)}%`,
+                },
+              ]}
+            />
+          </View>
+          <Text style={styles.progressValue}>
+            {formatINR(item.currentCorpus)} / {formatINR(item.targetAmount)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F0F16" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Financial Goals</Text>
@@ -323,7 +386,7 @@ export default function GoalsScreen() {
                   style={styles.textInput}
                   value={targetAmount}
                   onChangeText={setTargetAmount}
-                  placeholder="1000000"
+                  placeholder="1500000"
                   keyboardType="numeric"
                   placeholderTextColor="#666"
                 />
@@ -342,13 +405,27 @@ export default function GoalsScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Current Lumpsum (₹)</Text>
+                <Text style={styles.inputLabel}>Initial Lump Sum (₹)</Text>
                 <TextInput
                   style={styles.textInput}
-                  value={currentLumpsum}
-                  onChangeText={setCurrentLumpsum}
-                  placeholder="0"
+                  value={initialCorpus}
+                  onChangeText={setInitialCorpus}
+                  placeholder="50000"
                   keyboardType="numeric"
+                  placeholderTextColor="#666"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Expected Annual Return (%)
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={expectedReturn}
+                  onChangeText={setExpectedReturn}
+                  placeholder="12"
+                  keyboardType="decimal-pad"
                   placeholderTextColor="#666"
                 />
               </View>
@@ -384,11 +461,40 @@ export default function GoalsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              Update {selectedGoal?.name} - Year{" "}
-              {(selectedGoal?.yearlyUpdates?.length || 0) + 1}
+              Yearly Review - {selectedGoal?.name}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              Year {(selectedGoal?.history?.length || 0) + 1} of{" "}
+              {selectedGoal?.timeHorizon}
             </Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.reviewSection}>
+                <Text style={styles.reviewSectionTitle}>Current Status</Text>
+                {selectedGoal && (
+                  <View style={styles.reviewCard}>
+                    <View style={styles.reviewRow}>
+                      <Text style={styles.reviewLabel}>Portfolio Value:</Text>
+                      <Text style={styles.reviewValue}>
+                        {formatINR(selectedGoal.currentCorpus)}
+                      </Text>
+                    </View>
+                    <View style={styles.reviewRow}>
+                      <Text style={styles.reviewLabel}>Monthly SIP:</Text>
+                      <Text style={styles.reviewValue}>
+                        {formatINR(selectedGoal.monthlySIP)}
+                      </Text>
+                    </View>
+                    <View style={styles.reviewRow}>
+                      <Text style={styles.reviewLabel}>Target:</Text>
+                      <Text style={styles.reviewValue}>
+                        {formatINR(selectedGoal.targetAmount)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Current Portfolio Value (₹) *
@@ -405,35 +511,33 @@ export default function GoalsScreen() {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
-                  Lumpsum Added This Year (₹)
+                  Extra Savings This Year (₹)
                 </Text>
                 <TextInput
                   style={styles.textInput}
-                  value={lumpsumAdded}
-                  onChangeText={setLumpsumAdded}
+                  value={extraAdded}
+                  onChangeText={setExtraAdded}
                   placeholder="0"
                   keyboardType="numeric"
                   placeholderTextColor="#666"
                 />
               </View>
 
-              <View style={styles.checkboxGroup}>
-                <TouchableOpacity
-                  style={styles.checkbox}
-                  onPress={() => setReduceSIP(!reduceSIP)}
-                >
-                  <View
-                    style={[
-                      styles.checkboxBox,
-                      reduceSIP && styles.checkboxChecked,
-                    ]}
-                  >
-                    {reduceSIP && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <Text style={styles.checkboxLabel}>
-                    Reduce monthly SIP amount
-                  </Text>
-                </TouchableOpacity>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Actual Return This Year (%) *
+                </Text>
+                <Text style={styles.inputHelper}>
+                  Enter the actual annual return achieved
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={actualReturn}
+                  onChangeText={setActualReturn}
+                  placeholder="10.5"
+                  keyboardType="decimal-pad"
+                  placeholderTextColor="#666"
+                />
               </View>
 
               <View style={styles.inputGroup}>
@@ -442,7 +546,7 @@ export default function GoalsScreen() {
                   style={[styles.textInput, styles.textArea]}
                   value={updateNotes}
                   onChangeText={setUpdateNotes}
-                  placeholder="Any additional notes..."
+                  placeholder="Market performance, inflation impact, etc."
                   multiline
                   numberOfLines={3}
                   placeholderTextColor="#666"
@@ -512,7 +616,7 @@ export default function GoalsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F0F16",
+    backgroundColor: "#FFFFFF",
   },
   header: {
     flexDirection: "row",
@@ -525,28 +629,28 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: "#1A1A1A",
   },
   addButton: {
-    backgroundColor: "#00D09C",
+    backgroundColor: "#FF8C00",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   addButtonText: {
-    color: "#0F0F16",
+    color: "#FFFFFF",
     fontWeight: "600",
   },
   goalsList: {
     padding: 20,
   },
   goalCard: {
-    backgroundColor: "#1A1A26",
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#2A2A38",
+    borderColor: "#E0E0E0",
   },
   goalHeader: {
     flexDirection: "row",
@@ -557,19 +661,37 @@ const styles = StyleSheet.create({
   goalName: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: "#1A1A1A",
   },
   goalTarget: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#00D09C",
+    color: "#FF8C00",
+  },
+  performanceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  performanceDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  performanceBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   goalDetails: {
     marginBottom: 12,
   },
   goalDetail: {
     fontSize: 14,
-    color: "#CCCCCC",
+    color: "#666666",
     marginBottom: 4,
   },
   progressContainer: {
@@ -580,15 +702,20 @@ const styles = StyleSheet.create({
     color: "#888888",
     marginBottom: 4,
   },
+  progressValue: {
+    fontSize: 12,
+    color: "#666666",
+    marginTop: 4,
+  },
   progressBar: {
-    height: 4,
-    backgroundColor: "#2A2A38",
-    borderRadius: 2,
+    height: 6,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 3,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#00D09C",
-    borderRadius: 2,
+    backgroundColor: "#FF8C00",
+    borderRadius: 3,
   },
   emptyState: {
     alignItems: "center",
@@ -602,7 +729,7 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 14,
-    color: "#666666",
+    color: "#AAAAAA",
     textAlign: "center",
   },
   modalOverlay: {
@@ -612,34 +739,75 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#1A1A26",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     width: "90%",
-    maxHeight: "80%",
+    maxHeight: "90%",
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: "#1A1A1A",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#666666",
     marginBottom: 20,
     textAlign: "center",
+  },
+  reviewSection: {
+    marginBottom: 20,
+  },
+  reviewSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1A1A1A",
+    marginBottom: 12,
+  },
+  reviewCard: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: 8,
+    padding: 12,
+  },
+  reviewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  reviewLabel: {
+    fontSize: 14,
+    color: "#666666",
+  },
+  reviewValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FF8C00",
   },
   inputGroup: {
     marginBottom: 16,
   },
   inputLabel: {
     fontSize: 16,
-    color: "#FFFFFF",
+    color: "#1A1A1A",
     marginBottom: 8,
     fontWeight: "500",
   },
+  inputHelper: {
+    fontSize: 12,
+    color: "#888888",
+    marginBottom: 6,
+  },
   textInput: {
-    backgroundColor: "#2A2A38",
+    backgroundColor: "#F5F5F5",
     borderRadius: 8,
     padding: 12,
-    color: "#FFFFFF",
+    color: "#1A1A1A",
     fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   textArea: {
     height: 80,
@@ -656,23 +824,23 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: "#00D09C",
+    borderColor: "#FF8C00",
     borderRadius: 4,
     marginRight: 8,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#00D09C",
+    backgroundColor: "#FF8C00",
   },
   checkmark: {
-    color: "#0F0F16",
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "bold",
   },
   checkboxLabel: {
     fontSize: 16,
-    color: "#FFFFFF",
+    color: "#1A1A1A",
   },
   investmentOptions: {
     marginTop: 20,
@@ -680,14 +848,16 @@ const styles = StyleSheet.create({
   optionsTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: "#1A1A1A",
     marginBottom: 12,
   },
   optionCard: {
-    backgroundColor: "#2A2A38",
+    backgroundColor: "#F5F5F5",
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   optionHeader: {
     flexDirection: "row",
@@ -698,7 +868,7 @@ const styles = StyleSheet.create({
   optionName: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: "#1A1A1A",
   },
   riskBadge: {
     paddingHorizontal: 8,
@@ -711,12 +881,12 @@ const styles = StyleSheet.create({
   },
   optionReturn: {
     fontSize: 14,
-    color: "#CCCCCC",
+    color: "#666666",
     marginBottom: 4,
   },
   optionSIP: {
     fontSize: 14,
-    color: "#00D09C",
+    color: "#FF8C00",
     fontWeight: "600",
   },
   modalButtons: {
