@@ -1,6 +1,8 @@
-import { Button } from "@/components/ui/button";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { SecondaryButton } from "@/components/ui/secondary-button";
 import { useUser } from "@/context/user-context";
 import questionnaireData from "@/data/questionnaire.json";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -24,9 +26,25 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import Svg, { Rect } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  Ellipse,
+  RadialGradient,
+  Stop,
+} from "react-native-svg";
 
-const { width: SW } = Dimensions.get("window");
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+
+// ─── Vortex ring definitions (4 rings, one per icon) ────────────────────────
+const RING_CX = SCREEN_W / 2;
+const RING_CY = SCREEN_H * 0.44;
+// Tighter ellipses so icons stay on-screen
+const RINGS = [
+  { rx: 100, ry: 40 }, // inner        — piggy-bank
+  { rx: 175, ry: 70 }, // middle       — chart-line
+  { rx: 248, ry: 99 }, // outer        — bitcoin
+];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,6 +137,14 @@ export default function Onboarding() {
       onInputChange={setInputValue}
       onAnswer={handleAnswer}
       onNext={handleNext}
+      onBack={() => {
+        if (currentIndex === 0) {
+          setStep("landing");
+        } else {
+          setCurrentIndex((i) => i - 1);
+          setInputValue("");
+        }
+      }}
     />
   );
 }
@@ -126,258 +152,201 @@ export default function Onboarding() {
 // ─── Landing Screen ───────────────────────────────────────────────────────────
 
 function LandingScreen({ onStart }: { onStart: () => void }) {
-  const buttonScale = useSharedValue(1);
-
-  // Blob animations
-  const blob1Y = useSharedValue(-80);
-  const blob2Y = useSharedValue(-120);
+  // Orbit angle (radians) for each icon — staggered so they start spread out
+  const orbit1 = useSharedValue(Math.PI * 0.3); // piggy-bank  — inner
+  const orbit2 = useSharedValue(Math.PI * 1.2); // chart-line  — middle
+  const orbit3 = useSharedValue(Math.PI * 1.8); // bitcoin     — outer
 
   React.useEffect(() => {
-    // Animate blob 1
-    blob1Y.value = withRepeat(
-      withTiming(-60, {
-        duration: 8000,
-        easing: Easing.inOut(Easing.sin),
+    orbit1.value = withRepeat(
+      withTiming(orbit1.value + Math.PI * 2, {
+        duration: 18000,
+        easing: Easing.linear,
       }),
       -1,
-      true,
+      false,
     );
-
-    // Animate blob 2
-    blob2Y.value = withRepeat(
-      withTiming(-100, {
-        duration: 9000,
-        easing: Easing.inOut(Easing.sin),
+    orbit2.value = withRepeat(
+      withTiming(orbit2.value + Math.PI * 2, {
+        duration: 26000,
+        easing: Easing.linear,
       }),
       -1,
-      true,
+      false,
+    );
+    orbit3.value = withRepeat(
+      withTiming(orbit3.value + Math.PI * 2, {
+        duration: 34000,
+        easing: Easing.linear,
+      }),
+      -1,
+      false,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const blob1Style = useAnimatedStyle(() => ({
-    top: blob1Y.value,
+  const CX = SCREEN_W / 2;
+  const CY = SCREEN_H * 0.44;
+  const H = 27; // half of icon bubble size (54/2)
+
+  const piggyStyle = useAnimatedStyle(() => ({
+    left: CX + RINGS[0].rx * Math.cos(orbit1.value) - H,
+    top: CY + RINGS[0].ry * Math.sin(orbit1.value) - H,
+  }));
+  const chartStyle = useAnimatedStyle(() => ({
+    left: CX + RINGS[1].rx * Math.cos(orbit2.value) - H,
+    top: CY + RINGS[1].ry * Math.sin(orbit2.value) - H,
+  }));
+  const bitcoinStyle = useAnimatedStyle(() => ({
+    left: CX + RINGS[2].rx * Math.cos(orbit3.value) - H,
+    top: CY + RINGS[2].ry * Math.sin(orbit3.value) - H,
   }));
 
-  const blob2Style = useAnimatedStyle(() => ({
-    bottom: blob2Y.value,
-  }));
-
-  const handlePress = () => {
-    buttonScale.value = withTiming(0.98, { duration: 100 }, () => {
-      buttonScale.value = withTiming(1, { duration: 100 });
-    });
-    setTimeout(() => onStart(), 50);
-  };
-
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
-  }));
+  const handlePress = () => setTimeout(() => onStart(), 50);
 
   return (
-    <SafeAreaView style={ls.root}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+    <View style={ls.root}>
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
-      {/* Animated Gradient Background */}
+      {/* ── 4 orbital rings + centre glow (SVG, static) ── */}
+      <View style={StyleSheet.absoluteFill}>
+        <Svg width={SCREEN_W} height={SCREEN_H}>
+          <Defs>
+            <RadialGradient id="centreGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor="#ffffff" stopOpacity={1} />
+              <Stop offset="28%" stopColor="#ffffff" stopOpacity={0.85} />
+              <Stop offset="60%" stopColor="#aaaaaa" stopOpacity={0.25} />
+              <Stop offset="100%" stopColor="#000000" stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+
+          {RINGS.map((ring, i) => (
+            <Ellipse
+              key={i}
+              cx={RING_CX}
+              cy={RING_CY}
+              rx={ring.rx}
+              ry={ring.ry}
+              fill="none"
+              stroke="rgba(255,255,255,0.28)"
+              strokeWidth={0.7}
+            />
+          ))}
+
+          <Circle cx={RING_CX} cy={RING_CY} r={56} fill="url(#centreGlow)" />
+          <Circle cx={RING_CX} cy={RING_CY} r={8} fill="white" opacity={0.95} />
+        </Svg>
+      </View>
+
+      {/* ── Bottom fade ── */}
       <LinearGradient
-        colors={["#F5F3F0", "#FAFAF8", "#F0EAEA"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={ls.gradientBg}
+        colors={["transparent", "rgba(0,0,0,0.7)", "#000000"]}
+        style={ls.bottomFade}
       />
 
-  
+      {/* ── Icons orbiting their rings ── */}
+      <Animated.View style={[ls.iconWrap, piggyStyle]}>
+        <View style={[ls.iconBubble, ls.iconPink]}>
+          <MaterialCommunityIcons name="piggy-bank" size={26} color="#fb7185" />
+        </View>
+      </Animated.View>
 
-      {/* Logo with Glassmorphic Background */}
-      <View style={ls.logoWrap}>
-        <View style={ls.logoGlassBg}>
-          <Svg width={90} height={90} viewBox="0 0 90 90">
-            {/* Bar 1 - Small */}
-            <Rect x={15} y={50} width={12} height={25} fill="#FF8C00" rx={3} />
-            {/* Bar 2 - Medium */}
-            <Rect x={40} y={35} width={12} height={40} fill="#FFB347" rx={3} />
-            {/* Bar 3 - Large */}
-            <Rect x={65} y={15} width={12} height={60} fill="#FFAA1D" rx={3} />
-          </Svg>
+      <Animated.View style={[ls.iconWrap, chartStyle]}>
+        <View style={[ls.iconBubble, ls.iconGreen]}>
+          <MaterialCommunityIcons name="chart-line" size={26} color="#4ade80" />
+        </View>
+      </Animated.View>
+
+      <Animated.View style={[ls.iconWrap, bitcoinStyle]}>
+        <View style={[ls.iconBubble, ls.iconGold]}>
+          <MaterialCommunityIcons name="bitcoin" size={26} color="#fbbf24" />
+        </View>
+      </Animated.View>
+
+      {/* ── Bottom text + CTA ── */}
+      <View style={ls.bottomContent}>
+        <Text style={ls.heading}>Take Control of Your Money</Text>
+        <Text style={ls.subText}>
+          Track expenses with voice, understand investments, simulate returns,
+          and plan financial goals — all in one intelligent finance companion.
+        </Text>
+        <View style={{ marginTop: 32 }}>
+          <PrimaryButton text="Continue" onPress={handlePress} />
         </View>
       </View>
-
-      {/* App name & tagline */}
-      <View style={ls.textBlock}>
-        <Text style={ls.appName}>WealthWise</Text>
-        <Text style={ls.tagline}>Your wealth, simplified</Text>
-        <Text style={ls.description}>
-          Clear answers, conscious decisions, confident results.
-        </Text>
-      </View>
-
-      {/* Feature pills - Glassmorphic */}
-      <View style={ls.pills}>
-        {["Track", "Plan", "Grow"].map((label) => (
-          <View key={label} style={ls.pill}>
-            <Text style={ls.pillText}>{label}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* CTA - Animated with Gradient */}
-      <View style={ls.ctaBlock}>
-        <Animated.View style={[buttonAnimatedStyle, { width: SW - 56 }]}>
-          <LinearGradient
-            colors={["#FF8C00", "#FFB84D"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={ls.ctaGradient}
-          >
-            <TouchableOpacity
-              style={ls.ctaButton}
-              onPress={handlePress}
-              activeOpacity={1}
-            >
-              <Text style={ls.ctaText}>Get Started</Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        </Animated.View>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const ls = StyleSheet.create({
   root: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 28,
-    overflow: "hidden",
-    backgroundColor: "#F5F3F0",
+    backgroundColor: "#000000",
   },
-  gradientBg: {
+  bottomFade: {
     position: "absolute",
-    top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    zIndex: 0,
-  },
-  blob1: {
-    position: "absolute",
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: "#1B2B5F",
-    top: -80,
-    left: -100,
-    zIndex: 1,
-  },
-  blob2: {
-    position: "absolute",
-    width: 300,
     height: 300,
-    borderRadius: 150,
-    backgroundColor: "#D4A574",
-    bottom: -120,
-    right: -80,
     zIndex: 1,
   },
-  logoWrap: {
-    marginBottom: 32,
-    zIndex: 10,
-    shadowColor: "#FF8C00",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
+  iconWrap: {
+    position: "absolute",
+    zIndex: 5,
   },
-  logoGlassBg: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(255, 255, 255, 0.35)",
+  iconBubble: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 0.5,
-    borderColor: "rgba(255, 255, 255, 0.6)",
-    backdropFilter: "blur(30px)",
   },
-  textBlock: {
-    alignItems: "center",
-    marginBottom: 28,
+  iconGreen: {
+    backgroundColor: "rgba(74,222,128,0.12)",
+    borderColor: "rgba(74,222,128,0.35)",
+  },
+  iconPink: {
+    backgroundColor: "rgba(251,113,133,0.12)",
+    borderColor: "rgba(251,113,133,0.35)",
+  },
+  iconGold: {
+    backgroundColor: "rgba(251,191,36,0.12)",
+    borderColor: "rgba(251,191,36,0.35)",
+  },
+  bottomContent: {
+    position: "absolute",
+    bottom: 100,
+    left: 32,
+    right: 32,
     zIndex: 10,
   },
-  appName: {
-    fontSize: 42,
-    fontWeight: "800",
-    color: "#1A1A1A",
-    letterSpacing: -0.8,
-    marginBottom: 8,
-  },
-  tagline: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FF8C00",
-    marginBottom: 12,
-    letterSpacing: 0.2,
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: "#666666",
-    textAlign: "center",
-    maxWidth: 320,
-    fontWeight: "500",
-  },
-  pills: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 10,
-    marginBottom: 48,
-    zIndex: 10,
-  },
-  pill: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.35)",
-    borderWidth: 0.5,
-    borderColor: "rgba(255, 255, 255, 0.6)",
-  },
-  pillText: {
-    fontSize: 13,
-    color: "#1A1A1A",
+  heading: {
+    fontSize: 28,
     fontWeight: "600",
-    letterSpacing: 0.1,
-  },
-  ctaBlock: {
-    alignItems: "center",
-    gap: 12,
-    zIndex: 10,
-  },
-  ctaGradient: {
-    borderRadius: 14,
-    overflow: "hidden",
-    shadowColor: "#FF8C00",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  ctaButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ctaText: {
-    fontSize: 17,
-    fontWeight: "700",
     color: "#FFFFFF",
-    letterSpacing: 0.2,
+    letterSpacing: -1.5,
+    marginBottom: 12,
   },
-  ctaHint: {
-    fontSize: 12.5,
-    color: "#999999",
+  subText: {
+    fontSize: 16,
+    color: "rgba(255,255,255,0.8)",
+    lineHeight: 24,
+  },
+  arrowBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  arrowText: {
+    fontSize: 22,
+    color: "#FFFFFF",
+    fontWeight: "400",
   },
 });
 
@@ -390,6 +359,7 @@ interface QuestionnaireScreenProps {
   onInputChange: (v: string) => void;
   onAnswer: (id: string, value: AnswerValue) => void;
   onNext: () => void;
+  onBack: () => void;
 }
 
 function QuestionnaireScreen({
@@ -399,12 +369,15 @@ function QuestionnaireScreen({
   onInputChange,
   onAnswer,
   onNext,
+  onBack,
 }: QuestionnaireScreenProps) {
   const question = ALL_QUESTIONS[currentIndex];
   const isLast = currentIndex === TOTAL - 1;
 
   // Progress bar pixel width (avoids TS percentage-string type issues)
-  const progressWidth = Math.round(((currentIndex + 1) / TOTAL) * (SW - 48));
+  const progressWidth = Math.round(
+    ((currentIndex + 1) / TOTAL) * (SCREEN_W - 48),
+  );
 
   function canProceed(): boolean {
     if (question.type === "number" || question.type === "text") {
@@ -473,9 +446,6 @@ function QuestionnaireScreen({
               <Text style={[qs.optText, active && qs.optTextActive]}>
                 {opt}
               </Text>
-              <View style={[qs.checkbox, active && qs.checkboxActive]}>
-                {active && <Text style={qs.checkmark}>✓</Text>}
-              </View>
             </TouchableOpacity>
           );
         })}
@@ -526,13 +496,15 @@ function QuestionnaireScreen({
 
       {/* ── Header ── */}
       <View style={qs.header}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={qs.backBtn}
+          activeOpacity={0.7}
+        >
+          <Text style={qs.backArrow}>←</Text>
+        </TouchableOpacity>
         <View style={qs.headerLeft}>
           <Text style={qs.sectionName}>{question.section}</Text>
-        </View>
-        <View style={qs.progressCounter}>
-          <Text style={qs.progressCurrent}>{currentIndex + 1}</Text>
-          <Text style={qs.progressSep}> / </Text>
-          <Text style={qs.progressTotal}>{TOTAL}</Text>
         </View>
       </View>
 
@@ -570,7 +542,7 @@ function QuestionnaireScreen({
 
         {/* ── Sticky footer button ── */}
         <View style={qs.footer}>
-          <Button
+          <SecondaryButton
             text={isLast ? "Save & Continue" : "Next"}
             onPress={onNext}
             disabled={!canProceed()}
@@ -595,7 +567,7 @@ const qs = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 14,
@@ -604,10 +576,25 @@ const qs = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.07)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    flexShrink: 0,
+  },
+  backArrow: {
+    fontSize: 18,
+    color: "#1A1A1A",
+    lineHeight: 22,
+  },
   sectionLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#FF8C00",
+    color: "#1A1A1A",
     letterSpacing: 1.8,
     marginBottom: 3,
   },
@@ -624,7 +611,7 @@ const qs = StyleSheet.create({
   progressCurrent: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#FF8C00",
+    color: "#1A1A1A",
   },
   progressSep: {
     fontSize: 14,
@@ -639,14 +626,14 @@ const qs = StyleSheet.create({
   // ── Progress bar ─────────────────────────────────────────────────────────────
   progressTrack: {
     height: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "rgba(0,0,0,0.1)",
     marginHorizontal: 24,
     borderRadius: 4,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#FF8C00",
+    backgroundColor: "#000000",
     borderRadius: 4,
   },
 
@@ -665,13 +652,13 @@ const qs = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: "rgba(255, 140, 0, 0.1)",
+    backgroundColor: "rgba(0,0,0,0.07)",
     marginBottom: 12,
   },
   hintBadgeText: {
     fontSize: 11.5,
     fontWeight: "600",
-    color: "#FF8C00",
+    color: "#1A1A1A",
     letterSpacing: 0.2,
   },
 
@@ -696,13 +683,14 @@ const qs = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 15,
     borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.35)",
-    borderWidth: 0.5,
-    borderColor: "rgba(255, 255, 255, 0.5)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "rgba(0,0,0,0.1)",
   },
   optCardActive: {
-    backgroundColor: "rgba(255, 140, 0, 0.1)",
-    borderColor: "#FF8C00",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#000000",
+    borderWidth: 1.5,
   },
   optText: {
     flex: 1,
@@ -712,7 +700,7 @@ const qs = StyleSheet.create({
     marginRight: 12,
   },
   optTextActive: {
-    color: "#FF8C00",
+    color: "#1A1A1A",
     fontWeight: "600",
   },
 
@@ -722,19 +710,19 @@ const qs = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#FF8C00",
+    borderColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   radioActive: {
-    borderColor: "#FF8C00",
+    borderColor: "#000000",
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#FF8C00",
+    backgroundColor: "#000000",
   },
 
   // ── Checkbox indicator ────────────────────────────────────────────────────────
@@ -743,14 +731,14 @@ const qs = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#FF8C00",
+    borderColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   checkboxActive: {
-    backgroundColor: "#FF8C00",
-    borderColor: "#FF8C00",
+    backgroundColor: "#000000",
+    borderColor: "#000000",
   },
   checkmark: {
     fontSize: 13,
@@ -774,7 +762,7 @@ const qs = StyleSheet.create({
     paddingLeft: 18,
     fontSize: 18,
     fontWeight: "600",
-    color: "#FF8C00",
+    color: "#1A1A1A",
   },
   input: {
     flex: 1,

@@ -1,7 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/primary-button";
 import { useUser } from "@/context/user-context";
 import quotesData from "@/data/quotes.json";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -17,11 +17,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Svg, { Circle, G, Path } from "react-native-svg";
+import Svg, { Circle } from "react-native-svg";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Ionicons>["name"]> = {
+const CATEGORY_ICONS: Record<
+  string,
+  React.ComponentProps<typeof Ionicons>["name"]
+> = {
   Food: "restaurant-outline",
   Travel: "car-outline",
   Shopping: "bag-outline",
@@ -60,16 +63,6 @@ function RingChart({ progress }: { progress: number }) {
   const clamped = Math.min(1, Math.max(0, progress));
   const offset = CIRCUMFERENCE * (1 - clamped);
   const center = RING_SIZE / 2;
-  // Orange for normal spending, red when over budget
-  const progressColor = clamped >= 1 ? "#FF6B6B" : "#FF8C00";
-
-  // Arrow tip position — end of the arc in SVG coordinate space
-  const angle = clamped * 2 * Math.PI;
-  const arrowX = center + RING_RADIUS * Math.cos(angle);
-  const arrowY = center + RING_RADIUS * Math.sin(angle);
-  // Rotate arrow to be tangent to the circle (clockwise direction)
-  // visually = clamped*360 deg; in SVG space add 90 to compensate for SVG's -90deg rotation
-  const arrowRotation = clamped * 360 + 90;
 
   return (
     <Svg
@@ -86,32 +79,18 @@ function RingChart({ progress }: { progress: number }) {
         strokeWidth={STROKE}
         fill="none"
       />
-      {/* Progress arc - Orange for expenses */}
+      {/* Progress arc - solid black, fills by percentage */}
       <Circle
         cx={center}
         cy={center}
         r={RING_RADIUS}
-        stroke={progressColor}
+        stroke="#000000"
         strokeWidth={STROKE}
         fill="none"
         strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
         strokeDashoffset={offset}
         strokeLinecap="round"
       />
-      {/* Arrow at the leading tip of the arc */}
-      {clamped > 0.01 && clamped < 0.99 && (
-        <G transform={`translate(${arrowX}, ${arrowY}) rotate(${arrowRotation})`}>
-          {/* Arrow head: a small right-pointing chevron */}
-          <Path
-            d="M -6 -5 L 2 0 L -6 5"
-            stroke="#1A1A1A"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </G>
-      )}
     </Svg>
   );
 }
@@ -259,10 +238,12 @@ export default function HomeScreen() {
     "Other",
   ];
 
-  const remaining = monthlyIncome - monthlySpent;
-  const progress = monthlyIncome > 0 ? monthlySpent / monthlyIncome : 0;
-  const percentage = Math.round(progress * 100);
-  const isOverBudget = monthlySpent > monthlyIncome;
+  const totalLocalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const effectiveBudget = monthlyIncome > 0 ? monthlyIncome : 50000;
+  const remaining = effectiveBudget - totalLocalSpent;
+  const progress = totalLocalSpent / effectiveBudget;
+  const percentage = Math.round(Math.min(progress, 1) * 100);
+  const isOverBudget = totalLocalSpent > effectiveBudget;
 
   const handleManualLogSubmit = () => {
     if (!manualDescription.trim() || !manualAmount.trim()) {
@@ -390,25 +371,74 @@ export default function HomeScreen() {
                 {userName ? userName.charAt(0).toUpperCase() : "U"}
               </Text>
             </View>
-            <View>
-              <Text style={styles.greeting}>{getGreeting()},</Text>
-              <Text style={styles.userName}>{userName || "User"} 👋</Text>
-            </View>
           </TouchableOpacity>
-          {exceededBudgets.length > 0 && (
+        </View>
+
+        <View className="flex-row">
+          <Text style={styles.greeting}>{getGreeting()},</Text>
+          <Text style={styles.userName}>{userName || "User"}</Text>
+        </View>
+
+        {/* ── Report Tabs + Notification ──────────────────────────────── */}
+        <View style={styles.reportTabsRow}>
+          <View style={styles.reportTabs}>
+            {(["Weekly", "Monthly", "Yearly"] as const).map((tab) => {
+              const type = tab.toLowerCase() as "weekly" | "monthly" | "yearly";
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={[
+                    styles.reportTab,
+                    selectedReportType === type && styles.reportTabActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedReportType(type);
+                    setShowReportModal(true);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.reportTabText,
+                      selectedReportType === type && styles.reportTabTextActive,
+                    ]}
+                  >
+                    {tab}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.reportTab}
+              onPress={() => setShowBudgetModal(true)}
+            >
+              <Text style={styles.reportTabText}>Budget</Text>
+            </TouchableOpacity>
+          </View>
+          {exceededBudgets.length > 0 ? (
             <TouchableOpacity
               style={[styles.notifBtn, styles.notifBtnAlert]}
               onPress={() => setShowAlertsModal(true)}
             >
-              <Ionicons name="notifications-outline" size={20} color="#1A1A1A" />
+              <Ionicons
+                name="notifications-outline"
+                size={20}
+                color="#1A1A1A"
+              />
               <View style={styles.notifBadge}>
                 <Text style={styles.notifBadgeText}>
                   {exceededBudgets.length}
                 </Text>
               </View>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.notifBtn}>
+              <Ionicons
+                name="notifications-outline"
+                size={20}
+                color="#CCCCCC"
+              />
+            </View>
           )}
-          {exceededBudgets.length === 0 && <View style={styles.notifBtn} />}
         </View>
 
         {/* ── Ring Chart ─────────────────────────────────────────────── */}
@@ -438,11 +468,7 @@ export default function HomeScreen() {
                 style={[
                   styles.ringPct,
                   {
-                    color: isOverBudget
-                      ? "#FF6B6B"
-                      : progress > 0.75
-                        ? "#FFB347"
-                        : "#1A1A1A",
+                    color: isOverBudget ? "#555555" : "#1A1A1A",
                   },
                 ]}
               >
@@ -450,19 +476,23 @@ export default function HomeScreen() {
               </Text>
               <Text style={styles.percentageLabel}>Spent</Text>
               <Text style={styles.ringSpentAmt}>
-                {displayAmount(monthlySpent)}
+                {displayAmount(totalLocalSpent)}
               </Text>
               <Text style={styles.ringSubText}>
-                of {displayAmount(monthlyIncome)}
+                of {displayAmount(effectiveBudget)}
               </Text>
             </View>
           </View>
 
           {isOverBudget && (
             <View style={styles.overBudgetBadge}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Ionicons name="warning-outline" size={14} color="#FF6B6B" />
-                <Text style={styles.overBudgetText}>Over budget this month</Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Ionicons name="warning-outline" size={14} color="#555555" />
+                <Text style={styles.overBudgetText}>
+                  Over budget this month
+                </Text>
               </View>
             </View>
           )}
@@ -473,28 +503,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Stats Row ──────────────────────────────────────────────── */}
-        <View style={styles.statsRow}>
-          <StatCard
-            icon="cash-outline"
-            label="Income"
-            value={displayAmount(monthlyIncome)}
-            accent="#FF8C00"
-          />
-          <StatCard
-            icon="trending-down-outline"
-            label="Spent"
-            value={displayAmount(monthlySpent)}
-            accent="#FF6B6B"
-          />
-          <StatCard
-            icon="wallet-outline"
-            label="Remaining"
-            value={displayAmount(remaining)}
-            accent="#4DABF7"
-          />
-        </View>
-
         {/* ── Expense Logging Buttons ────────────────────────────────── */}
         <View style={styles.logButtonsContainer}>
           <TouchableOpacity
@@ -502,7 +510,12 @@ export default function HomeScreen() {
             onPress={() => setShowVoiceModal(true)}
             activeOpacity={0.75}
           >
-            <Ionicons name="mic-outline" size={28} color="#FF8C00" style={styles.logBtnIcon} />
+            <Ionicons
+              name="mic-outline"
+              size={28}
+              color="#1A1A1A"
+              style={styles.logBtnIcon}
+            />
             <Text style={styles.logBtnTitle}>Voice Log</Text>
             <Text style={styles.logBtnSub}>Speak expense</Text>
           </TouchableOpacity>
@@ -512,44 +525,15 @@ export default function HomeScreen() {
             onPress={() => setShowManualModal(true)}
             activeOpacity={0.75}
           >
-            <Ionicons name="create-outline" size={28} color="#1A1A1A" style={styles.logBtnIcon} />
+            <Ionicons
+              name="create-outline"
+              size={28}
+              color="#1A1A1A"
+              style={styles.logBtnIcon}
+            />
             <Text style={styles.logBtnTitle}>Manual Log</Text>
             <Text style={styles.logBtnSub}>Type expense</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* ── Reports ────────────────────────────────────────────────── */}
-        <Text style={[styles.sectionTitle, { color: "#1A1A1A" }]}>
-          Reports & Management
-        </Text>
-        <View style={styles.reportsRow}>
-          {[
-            { label: "Weekly", icon: "calendar-outline" as const, type: "weekly" },
-            { label: "Monthly", icon: "bar-chart-outline" as const, type: "monthly" },
-            { label: "Yearly", icon: "trending-up-outline" as const, type: "yearly" },
-            { label: "Budgets", icon: "wallet-outline" as const, type: "budgets" },
-          ].map(({ label, icon, type }) => (
-            <TouchableOpacity
-              key={label}
-              style={styles.reportCard}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (type === "budgets") {
-                  setShowBudgetModal(true);
-                } else if (
-                  type === "weekly" ||
-                  type === "monthly" ||
-                  type === "yearly"
-                ) {
-                  setSelectedReportType(type);
-                  setShowReportModal(true);
-                }
-              }}
-            >
-              <Ionicons name={icon} size={24} color="#1A1A1A" />
-              <Text style={styles.reportLabel}>{label}</Text>
-            </TouchableOpacity>
-          ))}
         </View>
 
         {/* ── Insights ──────────────────────────────────────────────────── */}
@@ -565,9 +549,24 @@ export default function HomeScreen() {
                 return (
                   <View key={category} style={styles.insightItem}>
                     <View style={styles.insightCategoryInfo}>
-                      <View style={[styles.insightCategory, { flexDirection: "row", alignItems: "center", gap: 6 }]}>
-                        <Ionicons name={CATEGORY_ICONS[category] ?? "card-outline"} size={14} color="#555" />
-                        <Text style={styles.insightCategoryText}>{category}</Text>
+                      <View
+                        style={[
+                          styles.insightCategory,
+                          {
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={CATEGORY_ICONS[category] ?? "card-outline"}
+                          size={14}
+                          color="#555"
+                        />
+                        <Text style={styles.insightCategoryText}>
+                          {category}
+                        </Text>
                       </View>
                       <View style={styles.insightProgressBar}>
                         <View
@@ -750,7 +749,11 @@ export default function HomeScreen() {
                 ]}
                 onPress={() => setIsRecording(!isRecording)}
               >
-                <Ionicons name="mic-outline" size={40} color={isRecording ? "#FF6B6B" : "#FF8C00"} />
+                <Ionicons
+                  name="mic-outline"
+                  size={40}
+                  color={isRecording ? "#555555" : "#1A1A1A"}
+                />
                 <Text style={styles.recordBtnText}>
                   {isRecording ? "Stop Recording" : "Start Recording"}
                 </Text>
@@ -856,7 +859,7 @@ export default function HomeScreen() {
                           styles.budgetProgressFill,
                           {
                             width: `${Math.min(percentage, 100)}%`,
-                            backgroundColor: isExceeded ? "#FF6B6B" : "#FF8C00",
+                            backgroundColor: isExceeded ? "#555555" : "#1A1A1A",
                           },
                         ]}
                       />
@@ -960,7 +963,7 @@ export default function HomeScreen() {
                         <Text
                           style={[
                             styles.reportSummaryValue,
-                            { color: "#FF8C00" },
+                            { color: "#1A1A1A" },
                           ]}
                         >
                           {displayAmount(report.totalSpent)}
@@ -1070,7 +1073,11 @@ export default function HomeScreen() {
                   <View key={category} style={styles.alertCard}>
                     <View style={styles.alertHeader}>
                       <View style={styles.alertIconBg}>
-                        <Ionicons name="warning-outline" size={20} color="#FF6B6B" />
+                        <Ionicons
+                          name="warning-outline"
+                          size={20}
+                          color="#FF6B6B"
+                        />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.alertCategory}>{category}</Text>
@@ -1157,7 +1164,12 @@ function StatCard({
 }) {
   return (
     <View style={[styles.statCard, { borderColor: accent + "55" }]}>
-      <Ionicons name={icon} size={22} color={accent} style={{ marginBottom: 6 }} />
+      <Ionicons
+        name={icon}
+        size={22}
+        color={accent}
+        style={{ marginBottom: 6 }}
+      />
       <Text style={[styles.statValue, { color: accent }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -1196,13 +1208,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#FF8C00",
+    backgroundColor: "#1A1A1A",
     justifyContent: "center",
     alignItems: "center",
   },
   avatarLetter: { color: "#FFFFFF", fontSize: 22, fontWeight: "800" },
-  greeting: { color: "#999999", fontSize: 13 },
-  userName: { color: "#1A1A1A", fontSize: 17, fontWeight: "700" },
+  greeting: { color: "#999999", fontSize: 22 },
+  userName: { color: "#1A1A1A", fontSize: 22, fontWeight: "700" },
   notifBtn: {
     width: 44,
     height: 44,
@@ -1253,12 +1265,12 @@ const styles = StyleSheet.create({
   percentageLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#FF8C00",
+    color: "#666666",
     marginTop: -2,
     letterSpacing: 0.5,
   },
   ringSpentAmt: {
-    color: "#FF8C00",
+    color: "#1A1A1A",
     fontSize: 17,
     fontWeight: "600",
     marginTop: 2,
@@ -1266,23 +1278,19 @@ const styles = StyleSheet.create({
   ringSubText: { color: "#999999", fontSize: 12, marginTop: 2 },
   overBudgetBadge: {
     marginTop: 14,
-    backgroundColor: "#FF6B6B22",
+    backgroundColor: "rgba(0,0,0,0.06)",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  overBudgetText: { color: "#FF6B6B", fontSize: 13, fontWeight: "600" },
+  overBudgetText: { color: "#555555", fontSize: 13, fontWeight: "600" },
 
   // Quote section
   quoteContainer: {
     marginTop: 18,
     marginHorizontal: 12,
-    backgroundColor: "#F5F5F5",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderLeftWidth: 4,
-    borderLeftColor: "#FF8C00",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   quoteText: {
     fontSize: 13,
@@ -1356,7 +1364,42 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: "rgba(255, 255, 255, 0.6)",
   },
-  reportLabel: { color: "#1A1A1A", fontSize: 12, fontWeight: "600", textAlign: "center" },
+  reportLabel: {
+    color: "#1A1A1A",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+
+  // Report tabs
+  reportTabsRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  reportTabs: {
+    flexDirection: "row" as const,
+    gap: 6,
+  },
+  reportTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.05)",
+  },
+  reportTabActive: {
+    backgroundColor: "#1A1A1A",
+  },
+  reportTabText: {
+    color: "#666666",
+    fontSize: 13,
+    fontWeight: "600" as const,
+  },
+  reportTabTextActive: {
+    color: "#FFFFFF",
+  },
 
   // Recent expenses - Glassmorphic
   expenseRow: {
@@ -1465,7 +1508,7 @@ const styles = StyleSheet.create({
     borderColor: "#E0E0E0",
   },
   currencySymbol: {
-    color: "#FF8C00",
+    color: "#1A1A1A",
     fontSize: 16,
     fontWeight: "600",
     paddingLeft: 12,
@@ -1501,8 +1544,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.4)",
   },
   categoryBtnActive: {
-    backgroundColor: "#FF8C00",
-    borderColor: "#FF8C00",
+    backgroundColor: "#1A1A1A",
+    borderColor: "#1A1A1A",
   },
   categoryBtnText: {
     color: "#666666",
@@ -1541,7 +1584,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   voiceExample: {
-    color: "#FF8C00",
+    color: "#666666",
     fontSize: 12,
     fontStyle: "italic",
   },
@@ -1555,8 +1598,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.4)",
   },
   recordBtnActive: {
-    borderColor: "#FF6B6B",
-    backgroundColor: "#FFE5E5",
+    borderColor: "#555555",
+    backgroundColor: "#F0F0F0",
   },
   recordIcon: {
     fontSize: 40,
@@ -1578,10 +1621,10 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#555555",
   },
   recordingText: {
-    color: "#FF6B6B",
+    color: "#555555",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1609,13 +1652,13 @@ const styles = StyleSheet.create({
 
   // Notification badge
   notifBtnAlert: {
-    backgroundColor: "#FFE5E5",
+    backgroundColor: "rgba(0,0,0,0.08)",
   },
   notifBadge: {
     position: "absolute",
     top: -4,
     right: -4,
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#1A1A1A",
     borderRadius: 10,
     width: 20,
     height: 20,
@@ -1654,16 +1697,16 @@ const styles = StyleSheet.create({
     color: "#666666",
   },
   budgetSpentExceeded: {
-    color: "#FF6B6B",
+    color: "#555555",
     fontWeight: "600",
   },
   budgetPercent: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#FF8C00",
+    color: "#1A1A1A",
   },
   budgetPercentExceeded: {
-    color: "#FF6B6B",
+    color: "#555555",
   },
   budgetProgressBar: {
     height: 8,
@@ -1694,7 +1737,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   budgetUpdateBtn: {
-    backgroundColor: "#FF8C00",
+    backgroundColor: "#1A1A1A",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1706,14 +1749,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   budgetAlert: {
-    backgroundColor: "#FFE5E5",
+    backgroundColor: "#F0F0F0",
     borderRadius: 8,
     padding: 10,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF6B6B",
+    borderLeftColor: "#555555",
   },
   budgetAlertText: {
-    color: "#FF6B6B",
+    color: "#555555",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -1793,7 +1836,7 @@ const styles = StyleSheet.create({
   },
   reportCategoryProgressFill: {
     height: "100%",
-    backgroundColor: "#FF8C00",
+    backgroundColor: "#1A1A1A",
     borderRadius: 3,
   },
   reportCategoryAmount: {
@@ -1802,7 +1845,7 @@ const styles = StyleSheet.create({
   reportCategoryValue: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#FF8C00",
+    color: "#1A1A1A",
   },
   reportCategoryPercent: {
     fontSize: 11,
@@ -1871,7 +1914,7 @@ const styles = StyleSheet.create({
   },
   insightProgressFill: {
     height: "100%",
-    backgroundColor: "#FF8C00",
+    backgroundColor: "#1A1A1A",
     borderRadius: 3,
   },
   insightAmount: {
@@ -1880,7 +1923,7 @@ const styles = StyleSheet.create({
   insightAmountValue: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FF8C00",
+    color: "#1A1A1A",
   },
   insightPercentage: {
     fontSize: 12,
@@ -1898,12 +1941,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   alertCard: {
-    backgroundColor: "#FFF5F5",
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#FFE0E0",
+    borderColor: "#E0E0E0",
   },
   alertHeader: {
     flexDirection: "row",
@@ -1915,7 +1958,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: "#FFE5E5",
+    backgroundColor: "#E8E8E8",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -1932,12 +1975,12 @@ const styles = StyleSheet.create({
   alertExceeded: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#FF6B6B",
+    color: "#555555",
   },
   alertPercent: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#FF6B6B",
+    color: "#555555",
   },
   alertDetails: {
     backgroundColor: "#FFFFFF",
@@ -1951,7 +1994,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: "#FFE0E0",
+    borderBottomColor: "#E8E8E8",
   },
   alertDetailRow__last: {
     borderBottomWidth: 0,
@@ -1969,17 +2012,17 @@ const styles = StyleSheet.create({
   alertDetailValueRed: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#FF6B6B",
+    color: "#555555",
   },
   alertProgressBar: {
     height: 8,
-    backgroundColor: "#FFE0E0",
+    backgroundColor: "#E0E0E0",
     borderRadius: 4,
     overflow: "hidden",
   },
   alertProgressFill: {
     height: "100%",
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#555555",
     borderRadius: 4,
   },
 });

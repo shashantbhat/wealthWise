@@ -207,3 +207,5 @@ export const calculateGoalProgress = (
     isOnTrack: projectedValue >= targetAmount,
   };
 };
+
+export default {};

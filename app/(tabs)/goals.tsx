@@ -1,22 +1,22 @@
 import {
-    adjustGoalProgress,
-    calculateFutureValue,
-    calculateRequiredSIP,
+  adjustGoalProgress,
+  calculateFutureValue,
+  calculateRequiredSIP,
 } from "@/app/utils/goalCalculator";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/primary-button";
 import React, { useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface Goal {
@@ -240,8 +240,11 @@ export default function GoalsScreen() {
     }
   };
 
-  const getPerformanceStatus = (goal: Goal): { label: string; color: string } => {
-    if (goal.history.length === 0) return { label: "On Track", color: "#FF8C00" };
+  const getPerformanceStatus = (
+    goal: Goal,
+  ): { label: string; color: string } => {
+    if (goal.history.length === 0)
+      return { label: "On Track", color: "#FF8C00" };
     const latest = goal.history[goal.history.length - 1];
     const diff = latest.actualReturn - goal.expectedReturn;
     if (diff > 0.5) return { label: "Outperforming", color: "#00C853" };
@@ -278,10 +281,30 @@ export default function GoalsScreen() {
         <View style={styles.goalHeader}>
           <Text style={styles.goalName}>{item.name}</Text>
           <View style={{ alignItems: "flex-end", gap: 4 }}>
-            <Text style={styles.goalTarget}>{formatINR(item.targetAmount)}</Text>
-            <View style={[styles.performanceBadge, { backgroundColor: performance.color + "22", borderColor: performance.color + "66" }]}>
-              <View style={[styles.performanceDot, { backgroundColor: performance.color }]} />
-              <Text style={[styles.performanceBadgeText, { color: performance.color }]}>
+            <Text style={styles.goalTarget}>
+              {formatINR(item.targetAmount)}
+            </Text>
+            <View
+              style={[
+                styles.performanceBadge,
+                {
+                  backgroundColor: performance.color + "22",
+                  borderColor: performance.color + "66",
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.performanceDot,
+                  { backgroundColor: performance.color },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.performanceBadgeText,
+                  { color: performance.color },
+                ]}
+              >
                 {performance.label}
               </Text>
             </View>
