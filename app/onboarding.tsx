@@ -1,5 +1,9 @@
-import { Button } from "@/components/ui/button";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { SecondaryButton } from "@/components/ui/secondary-button";
+import { useUser } from "@/context/user-context";
 import questionnaireData from "@/data/questionnaire.json";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -15,9 +19,32 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
+import Animated, {
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from "react-native-reanimated";
+import Svg, {
+    Circle,
+    Defs,
+    Ellipse,
+    RadialGradient,
+    Stop,
+} from "react-native-svg";
 
-const { width: SW } = Dimensions.get("window");
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+
+// ─── Vortex ring definitions (4 rings, one per icon) ────────────────────────
+const RING_CX = SCREEN_W / 2;
+const RING_CY = SCREEN_H * 0.44;
+// Tighter ellipses so icons stay on-screen
+const RINGS = [
+  { rx: 100, ry: 40 }, // inner        — piggy-bank
+  { rx: 175, ry: 70 }, // middle       — chart-line
+  { rx: 248, ry: 99 }, // outer        — bitcoin
+];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,6 +87,7 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [inputValue, setInputValue] = useState("");
   const router = useRouter();
+  const { setAnswers: saveAnswersToContext, setProfile } = useUser();
 
   function handleAnswer(id: string, value: AnswerValue) {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -67,15 +95,34 @@ export default function Onboarding() {
 
   function handleNext() {
     const q = ALL_QUESTIONS[currentIndex];
+    let updatedAnswers = { ...answers };
 
     // Commit text / number inputs into answers map
     if (q.type === "number" || q.type === "text") {
       const value =
         q.type === "number" ? Number(inputValue) : inputValue.trim();
+      updatedAnswers[q.id] = value;
       handleAnswer(q.id, value);
     }
 
     if (currentIndex === TOTAL - 1) {
+      // Save answers to context before navigating
+      saveAnswersToContext(updatedAnswers);
+      // Update profile with the entered name
+      const riskMap: Record<string, string> = {
+        "Low risk, low return": "Conservative",
+        "Balanced risk and return": "Moderate",
+        "High risk, high return": "Aggressive",
+      };
+      setProfile({
+        name: (updatedAnswers.user_name as string) || "User",
+        persona: (updatedAnswers.occupation as string) || "Student",
+        monthlyIncome: (updatedAnswers.monthly_income as number) || 0,
+        salaryDay: 1,
+        riskLevel:
+          riskMap[updatedAnswers.risk_preference as string] || "Moderate",
+        baseCurrency: "INR",
+      });
       // Onboarding complete — replace so user can't swipe back into it
       router.replace("/(tabs)");
     } else {
@@ -96,6 +143,14 @@ export default function Onboarding() {
       onInputChange={setInputValue}
       onAnswer={handleAnswer}
       onNext={handleNext}
+      onBack={() => {
+        if (currentIndex === 0) {
+          setStep("landing");
+        } else {
+          setCurrentIndex((i) => i - 1);
+          setInputValue("");
+        }
+      }}
     />
   );
 }
@@ -103,150 +158,201 @@ export default function Onboarding() {
 // ─── Landing Screen ───────────────────────────────────────────────────────────
 
 function LandingScreen({ onStart }: { onStart: () => void }) {
-  return (
-    <SafeAreaView style={ls.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D0D1A" />
+  // Orbit angle (radians) for each icon — staggered so they start spread out
+  const orbit1 = useSharedValue(Math.PI * 0.3); // piggy-bank  — inner
+  const orbit2 = useSharedValue(Math.PI * 1.2); // chart-line  — middle
+  const orbit3 = useSharedValue(Math.PI * 1.8); // bitcoin     — outer
 
-      {/* Logo */}
-      <View style={ls.logoWrap}>
-        <Svg width={104} height={104} viewBox="0 0 104 104">
-          <Circle cx={52} cy={52} r={52} fill="#151528" />
-          <Circle
-            cx={52}
-            cy={52}
-            r={48}
-            fill="none"
-            stroke="#00D09C"
-            strokeWidth={1.5}
-            opacity={0.3}
-          />
-          {/* "W" / upward chart path */}
-          <Path
-            d="M30 40 L41 66 L52 50 L63 66 L74 40"
-            stroke="#00D09C"
-            strokeWidth={4.5}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Growth dot on the peak */}
-          <Circle cx={74} cy={40} r={5} fill="#00D09C" />
+  React.useEffect(() => {
+    orbit1.value = withRepeat(
+      withTiming(orbit1.value + Math.PI * 2, {
+        duration: 18000,
+        easing: Easing.linear,
+      }),
+      -1,
+      false,
+    );
+    orbit2.value = withRepeat(
+      withTiming(orbit2.value + Math.PI * 2, {
+        duration: 26000,
+        easing: Easing.linear,
+      }),
+      -1,
+      false,
+    );
+    orbit3.value = withRepeat(
+      withTiming(orbit3.value + Math.PI * 2, {
+        duration: 34000,
+        easing: Easing.linear,
+      }),
+      -1,
+      false,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const CX = SCREEN_W / 2;
+  const CY = SCREEN_H * 0.44;
+  const H = 27; // half of icon bubble size (54/2)
+
+  const piggyStyle = useAnimatedStyle(() => ({
+    left: CX + RINGS[0].rx * Math.cos(orbit1.value) - H,
+    top: CY + RINGS[0].ry * Math.sin(orbit1.value) - H,
+  }));
+  const chartStyle = useAnimatedStyle(() => ({
+    left: CX + RINGS[1].rx * Math.cos(orbit2.value) - H,
+    top: CY + RINGS[1].ry * Math.sin(orbit2.value) - H,
+  }));
+  const bitcoinStyle = useAnimatedStyle(() => ({
+    left: CX + RINGS[2].rx * Math.cos(orbit3.value) - H,
+    top: CY + RINGS[2].ry * Math.sin(orbit3.value) - H,
+  }));
+
+  const handlePress = () => setTimeout(() => onStart(), 50);
+
+  return (
+    <View style={ls.root}>
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+
+      {/* ── 4 orbital rings + centre glow (SVG, static) ── */}
+      <View style={StyleSheet.absoluteFill}>
+        <Svg width={SCREEN_W} height={SCREEN_H}>
+          <Defs>
+            <RadialGradient id="centreGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor="#ffffff" stopOpacity={1} />
+              <Stop offset="28%" stopColor="#ffffff" stopOpacity={0.85} />
+              <Stop offset="60%" stopColor="#aaaaaa" stopOpacity={0.25} />
+              <Stop offset="100%" stopColor="#000000" stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+
+          {RINGS.map((ring, i) => (
+            <Ellipse
+              key={i}
+              cx={RING_CX}
+              cy={RING_CY}
+              rx={ring.rx}
+              ry={ring.ry}
+              fill="none"
+              stroke="rgba(255,255,255,0.28)"
+              strokeWidth={0.7}
+            />
+          ))}
+
+          <Circle cx={RING_CX} cy={RING_CY} r={56} fill="url(#centreGlow)" />
+          <Circle cx={RING_CX} cy={RING_CY} r={8} fill="white" opacity={0.95} />
         </Svg>
       </View>
 
-      {/* App name & tagline */}
-      <View style={ls.textBlock}>
-        <Text style={ls.appName}>WealthWise</Text>
-        <Text style={ls.tagline}>Your money, managed smartly.</Text>
-        <Text style={ls.description}>
-          Track every rupee, set smart goals, and get AI-powered insights — so
-          you always know where your money goes and how to grow it.
+      {/* ── Bottom fade ── */}
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.7)", "#000000"]}
+        style={ls.bottomFade}
+      />
+
+      {/* ── Icons orbiting their rings ── */}
+      <Animated.View style={[ls.iconWrap, piggyStyle]}>
+        <View style={[ls.iconBubble, ls.iconPink]}>
+          <MaterialCommunityIcons name="piggy-bank" size={26} color="#fb7185" />
+        </View>
+      </Animated.View>
+
+      <Animated.View style={[ls.iconWrap, chartStyle]}>
+        <View style={[ls.iconBubble, ls.iconGreen]}>
+          <MaterialCommunityIcons name="chart-line" size={26} color="#4ade80" />
+        </View>
+      </Animated.View>
+
+      <Animated.View style={[ls.iconWrap, bitcoinStyle]}>
+        <View style={[ls.iconBubble, ls.iconGold]}>
+          <MaterialCommunityIcons name="bitcoin" size={26} color="#fbbf24" />
+        </View>
+      </Animated.View>
+
+      {/* ── Bottom text + CTA ── */}
+      <View style={ls.bottomContent}>
+        <Text style={ls.heading}>Take Control of Your Money</Text>
+        <Text style={ls.subText}>
+          Track expenses with voice, understand investments, simulate returns,
+          and plan financial goals — all in one intelligent finance companion.
         </Text>
+        <View style={{ marginTop: 32 }}>
+          <PrimaryButton text="Continue" onPress={handlePress} />
+        </View>
       </View>
-
-      {/* Feature pills */}
-      <View style={ls.pills}>
-        {["📊 Expense Tracking", "🎯 Goal Planning", "🤖 AI Insights"].map(
-          (label) => (
-            <View key={label} style={ls.pill}>
-              <Text style={ls.pillText}>{label}</Text>
-            </View>
-          ),
-        )}
-      </View>
-
-      {/* CTA */}
-      <View style={ls.ctaBlock}>
-        <Button
-          text="Get Started"
-          onPress={onStart}
-          style={{ width: SW - 56 }}
-        />
-        <Text style={ls.ctaHint}>Takes about 3 minutes</Text>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const ls = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0D0D1A",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 28,
-    overflow: "hidden",
+    backgroundColor: "#000000",
   },
-  blob: {
+  bottomFade: {
     position: "absolute",
-    width: 300,
+    bottom: 0,
+    left: 0,
+    right: 0,
     height: 300,
-    borderRadius: 150,
-    opacity: 0.07,
-    backgroundColor: "#00D09C",
+    zIndex: 1,
   },
-  blobTL: { top: -100, left: -80 },
-  blobBR: { bottom: -100, right: -80 },
-  logoWrap: {
-    marginBottom: 32,
-    shadowColor: "#00D09C",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 12,
+  iconWrap: {
+    position: "absolute",
+    zIndex: 5,
   },
-  textBlock: {
-    alignItems: "center",
-    marginBottom: 28,
-  },
-  appName: {
-    fontSize: 38,
-    fontWeight: "800",
-    color: "#EDEDED",
-    letterSpacing: -0.8,
-    marginBottom: 6,
-  },
-  tagline: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#00D09C",
-    marginBottom: 14,
-    letterSpacing: 0.1,
-  },
-  description: {
-    fontSize: 14.5,
-    lineHeight: 22,
-    color: "#9BA1A6",
-    textAlign: "center",
-    maxWidth: 310,
-  },
-  pills: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 8,
-    marginBottom: 44,
-  },
-  pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: "#1A1A2E",
+  iconBubble: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     borderWidth: 1,
-    borderColor: "#2A2A3E",
-  },
-  pillText: {
-    fontSize: 12.5,
-    color: "#C5C8CE",
-    fontWeight: "500",
-  },
-  ctaBlock: {
+    justifyContent: "center",
     alignItems: "center",
-    gap: 12,
   },
-  ctaHint: {
-    fontSize: 12.5,
-    color: "#5A5A6E",
+  iconGreen: {
+    backgroundColor: "rgba(74,222,128,0.12)",
+    borderColor: "rgba(74,222,128,0.35)",
+  },
+  iconPink: {
+    backgroundColor: "rgba(251,113,133,0.12)",
+    borderColor: "rgba(251,113,133,0.35)",
+  },
+  iconGold: {
+    backgroundColor: "rgba(251,191,36,0.12)",
+    borderColor: "rgba(251,191,36,0.35)",
+  },
+  bottomContent: {
+    position: "absolute",
+    bottom: 100,
+    left: 32,
+    right: 32,
+    zIndex: 10,
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    letterSpacing: -1.5,
+    marginBottom: 12,
+  },
+  subText: {
+    fontSize: 16,
+    color: "rgba(255,255,255,0.8)",
+    lineHeight: 24,
+  },
+  arrowBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  arrowText: {
+    fontSize: 22,
+    color: "#FFFFFF",
+    fontWeight: "400",
   },
 });
 
@@ -259,6 +365,7 @@ interface QuestionnaireScreenProps {
   onInputChange: (v: string) => void;
   onAnswer: (id: string, value: AnswerValue) => void;
   onNext: () => void;
+  onBack: () => void;
 }
 
 function QuestionnaireScreen({
@@ -268,12 +375,15 @@ function QuestionnaireScreen({
   onInputChange,
   onAnswer,
   onNext,
+  onBack,
 }: QuestionnaireScreenProps) {
   const question = ALL_QUESTIONS[currentIndex];
   const isLast = currentIndex === TOTAL - 1;
 
   // Progress bar pixel width (avoids TS percentage-string type issues)
-  const progressWidth = Math.round(((currentIndex + 1) / TOTAL) * (SW - 48));
+  const progressWidth = Math.round(
+    ((currentIndex + 1) / TOTAL) * (SCREEN_W - 48),
+  );
 
   function canProceed(): boolean {
     if (question.type === "number" || question.type === "text") {
@@ -342,9 +452,6 @@ function QuestionnaireScreen({
               <Text style={[qs.optText, active && qs.optTextActive]}>
                 {opt}
               </Text>
-              <View style={[qs.checkbox, active && qs.checkboxActive]}>
-                {active && <Text style={qs.checkmark}>✓</Text>}
-              </View>
             </TouchableOpacity>
           );
         })}
@@ -362,7 +469,7 @@ function QuestionnaireScreen({
           value={inputValue}
           onChangeText={onInputChange}
           placeholder={isNumber ? "0" : "Type your answer here…"}
-          placeholderTextColor="#4A4A5E"
+          placeholderTextColor="#999999"
           keyboardType={isNumber ? "numeric" : "default"}
           multiline={question.type === "text"}
           numberOfLines={question.type === "text" ? 4 : 1}
@@ -391,17 +498,19 @@ function QuestionnaireScreen({
 
   return (
     <SafeAreaView style={qs.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D0D1A" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
       {/* ── Header ── */}
       <View style={qs.header}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={qs.backBtn}
+          activeOpacity={0.7}
+        >
+          <Text style={qs.backArrow}>←</Text>
+        </TouchableOpacity>
         <View style={qs.headerLeft}>
           <Text style={qs.sectionName}>{question.section}</Text>
-        </View>
-        <View style={qs.progressCounter}>
-          <Text style={qs.progressCurrent}>{currentIndex + 1}</Text>
-          <Text style={qs.progressSep}> / </Text>
-          <Text style={qs.progressTotal}>{TOTAL}</Text>
         </View>
       </View>
 
@@ -439,7 +548,7 @@ function QuestionnaireScreen({
 
         {/* ── Sticky footer button ── */}
         <View style={qs.footer}>
-          <Button
+          <SecondaryButton
             text={isLast ? "Save & Continue" : "Next"}
             onPress={onNext}
             disabled={!canProceed()}
@@ -454,7 +563,7 @@ function QuestionnaireScreen({
 const qs = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0D0D1A",
+    backgroundColor: "#F5F3F0",
   },
   flex: {
     flex: 1,
@@ -464,7 +573,7 @@ const qs = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 14,
@@ -473,17 +582,32 @@ const qs = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.07)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    flexShrink: 0,
+  },
+  backArrow: {
+    fontSize: 18,
+    color: "#1A1A1A",
+    lineHeight: 22,
+  },
   sectionLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#00D09C",
+    color: "#1A1A1A",
     letterSpacing: 1.8,
     marginBottom: 3,
   },
   sectionName: {
     fontSize: 19,
     fontWeight: "700",
-    color: "#EDEDED",
+    color: "#1A1A1A",
     letterSpacing: -0.3,
   },
   progressCounter: {
@@ -493,7 +617,7 @@ const qs = StyleSheet.create({
   progressCurrent: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#00D09C",
+    color: "#1A1A1A",
   },
   progressSep: {
     fontSize: 14,
@@ -508,14 +632,14 @@ const qs = StyleSheet.create({
   // ── Progress bar ─────────────────────────────────────────────────────────────
   progressTrack: {
     height: 8,
-    backgroundColor: "#1F1F2E",
+    backgroundColor: "rgba(0,0,0,0.1)",
     marginHorizontal: 24,
     borderRadius: 4,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#00D09C",
+    backgroundColor: "#000000",
     borderRadius: 4,
   },
 
@@ -534,13 +658,13 @@ const qs = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: "#00D09C18",
+    backgroundColor: "rgba(0,0,0,0.07)",
     marginBottom: 12,
   },
   hintBadgeText: {
     fontSize: 11.5,
     fontWeight: "600",
-    color: "#00D09C",
+    color: "#1A1A1A",
     letterSpacing: 0.2,
   },
 
@@ -548,7 +672,7 @@ const qs = StyleSheet.create({
   questionText: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#EDEDED",
+    color: "#1A1A1A",
     lineHeight: 31,
     marginBottom: 24,
     letterSpacing: -0.3,
@@ -565,23 +689,24 @@ const qs = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 15,
     borderRadius: 14,
-    backgroundColor: "#1A1A2E",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "#2A2A3E",
+    borderColor: "rgba(0,0,0,0.1)",
   },
   optCardActive: {
-    backgroundColor: "#00D09C12",
-    borderColor: "#00D09C",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#000000",
+    borderWidth: 1.5,
   },
   optText: {
     flex: 1,
     fontSize: 15,
     fontWeight: "500",
-    color: "#C5C8CE",
+    color: "#666666",
     marginRight: 12,
   },
   optTextActive: {
-    color: "#00D09C",
+    color: "#1A1A1A",
     fontWeight: "600",
   },
 
@@ -591,19 +716,19 @@ const qs = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#3A3A5E",
+    borderColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   radioActive: {
-    borderColor: "#00D09C",
+    borderColor: "#000000",
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#00D09C",
+    backgroundColor: "#000000",
   },
 
   // ── Checkbox indicator ────────────────────────────────────────────────────────
@@ -612,19 +737,19 @@ const qs = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#3A3A5E",
+    borderColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   checkboxActive: {
-    backgroundColor: "#00D09C",
-    borderColor: "#00D09C",
+    backgroundColor: "#000000",
+    borderColor: "#000000",
   },
   checkmark: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#0D0D1A",
+    color: "#FFFFFF",
     lineHeight: 15,
   },
 
@@ -632,9 +757,9 @@ const qs = StyleSheet.create({
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1A1A2E",
-    borderWidth: 1.5,
-    borderColor: "#2A2A3E",
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255, 255, 255, 0.5)",
     borderRadius: 14,
     overflow: "hidden",
     minHeight: 56,
@@ -643,12 +768,12 @@ const qs = StyleSheet.create({
     paddingLeft: 18,
     fontSize: 18,
     fontWeight: "600",
-    color: "#00D09C",
+    color: "#1A1A1A",
   },
   input: {
     flex: 1,
     fontSize: 15,
-    color: "#EDEDED",
+    color: "#1A1A1A",
     paddingHorizontal: 18,
     paddingVertical: 16,
   },
@@ -661,7 +786,7 @@ const qs = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: Platform.OS === "ios" ? 12 : 20,
-    backgroundColor: "#0D0D1A",
+    backgroundColor: "#F5F3F0",
   },
   footerBtn: {
     width: "100%",
