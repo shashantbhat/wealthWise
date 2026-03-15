@@ -7,31 +7,31 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
 } from "react-native-reanimated";
 import Svg, {
-  Circle,
-  Defs,
-  Ellipse,
-  RadialGradient,
-  Stop,
+    Circle,
+    Defs,
+    Ellipse,
+    RadialGradient,
+    Stop,
 } from "react-native-svg";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -109,12 +109,18 @@ export default function Onboarding() {
       // Save answers to context before navigating
       saveAnswersToContext(updatedAnswers);
       // Update profile with the entered name
+      const riskMap: Record<string, string> = {
+        "Low risk, low return": "Conservative",
+        "Balanced risk and return": "Moderate",
+        "High risk, high return": "Aggressive",
+      };
       setProfile({
         name: (updatedAnswers.user_name as string) || "User",
         persona: (updatedAnswers.occupation as string) || "Student",
         monthlyIncome: (updatedAnswers.monthly_income as number) || 0,
         salaryDay: 1,
-        riskLevel: "Moderate",
+        riskLevel:
+          riskMap[updatedAnswers.risk_preference as string] || "Moderate",
         baseCurrency: "INR",
       });
       // Onboarding complete — replace so user can't swipe back into it
