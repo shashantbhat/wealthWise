@@ -25,7 +25,7 @@ const CALC_FUNDS = [
   { id: "midcap",   name: "Mid Cap Funds",          icon: "bar-chart-outline",         avgRate: 15,  color: "#FD7E14", risk: "Moderate-High" },
   { id: "largecap", name: "Large Cap Funds",        icon: "business-outline",          avgRate: 12,  color: "#20C997", risk: "Low-Moderate" },
   { id: "emerging", name: "Emerging Market Funds",  icon: "globe-outline",             avgRate: 13,  color: "#E83E8C", risk: "High" },
-  { id: "hybrid",   name: "Hybrid Funds",           icon: "git-merge-outline",         avgRate: 11,  color: "#FF8C00", risk: "Moderate" },
+  { id: "hybrid",   name: "Hybrid Funds",           icon: "git-merge-outline",         avgRate: 11,  color: "#0AA7B8", risk: "Moderate" },
 ];
 
 function calcSIP(p: number, rate: number, years: number) {
@@ -61,7 +61,7 @@ function SIPCalculator() {
   return (
     <View style={calcS.card}>
       <View style={calcS.titleRow}>
-        <Ionicons name="calculator" size={19} color="#FF8C00" />
+        <Ionicons name="calculator" size={19} color="#0AA7B8" />
         <Text style={calcS.title}>Investment Calculator</Text>
       </View>
 
@@ -165,17 +165,17 @@ function SIPCalculator() {
 }
 
 const calcS = StyleSheet.create({
-  card: { backgroundColor: "#FFF", borderRadius: 20, borderWidth: 1.5, borderColor: "rgba(255,140,0,0.35)", padding: 18, marginBottom: 20, shadowColor: "#FF8C00", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  card: { backgroundColor: "#FFF", borderRadius: 20, borderWidth: 1.5, borderColor: "rgba(10,167,184,0.35)", padding: 18, marginBottom: 20, shadowColor: "#0AA7B8", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
   title: { fontSize: 16, fontWeight: "800", color: "#1A1A1A" },
   toggle: { flexDirection: "row", backgroundColor: "#F4F4F4", borderRadius: 10, padding: 3, marginBottom: 14 },
   tBtn: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: "center" },
-  tOn: { backgroundColor: "#FF8C00" },
+  tOn: { backgroundColor: "#0AA7B8" },
   tTxt: { fontSize: 13, fontWeight: "600", color: "#999" },
   tOnTxt: { color: "#FFF" },
   label: { fontSize: 10, fontWeight: "700", color: "#AAA", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 },
   inputRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#F7F7F7", borderRadius: 12, borderWidth: 1, borderColor: "#E8E8E8", paddingHorizontal: 14, paddingVertical: 11 },
-  prefix: { fontSize: 17, fontWeight: "700", color: "#FF8C00", marginRight: 4 },
+  prefix: { fontSize: 17, fontWeight: "700", color: "#0AA7B8", marginRight: 4 },
   suffix: { fontSize: 14, color: "#AAA", marginLeft: 6 },
   input: { flex: 1, fontSize: 17, fontWeight: "600", color: "#1A1A1A", padding: 0 },
   selector: { flexDirection: "row", alignItems: "center", backgroundColor: "#F7F7F7", borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
@@ -401,7 +401,7 @@ function InvestmentDetail({
             {/* Tax note */}
             <View style={dStyles.taxCard}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <Ionicons name="receipt-outline" size={16} color="#FF8C00" />
+                <Ionicons name="receipt-outline" size={16} color="#0AA7B8" />
                 <Text style={dStyles.taxTitle}>Tax Wise Note</Text>
               </View>
               <Text style={dStyles.taxText}>{item.tax_note}</Text>
@@ -520,9 +520,9 @@ const dStyles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF8C00",
+    borderLeftColor: "#0AA7B8",
   },
-  taxTitle: { fontSize: 13, fontWeight: "700", color: "#FF8C00" },
+  taxTitle: { fontSize: 13, fontWeight: "700", color: "#0AA7B8" },
   taxText: { fontSize: 13, color: "#555", lineHeight: 18 },
   featuresCard: {
     backgroundColor: "rgba(255,255,255,0.5)",

@@ -1,9 +1,10 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Ionicons } from "@expo/vector-icons";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { TabTheme } from "@/constants/theme";
 
 export default function TabLayout() {
   return (
@@ -11,14 +12,17 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarActiveTintColor: "#00D09C",
-        tabBarInactiveTintColor: "#5A5A6E",
+        tabBarActiveTintColor: TabTheme.tabBarActive,
+        tabBarInactiveTintColor: TabTheme.tabBarInactive,
         tabBarStyle: {
-          backgroundColor: "#13131E",
-          borderTopColor: "#1F1F2E",
+          backgroundColor: TabTheme.tabBarBg,
+          borderTopColor: TabTheme.tabBarBorder,
           borderTopWidth: 1,
           height: 60,
           paddingBottom: 8,
+        },
+        sceneStyle: {
+          backgroundColor: TabTheme.background,
         },
       }}
     >
@@ -55,6 +59,15 @@ export default function TabLayout() {
           title: "Invest",
           tabBarIcon: ({ color }) => (
             <Ionicons name="trending-up-outline" size={26} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="portfolio"
+        options={{
+          title: "Portfolio",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="pie-chart-outline" size={26} color={color} />
           ),
         }}
       />
