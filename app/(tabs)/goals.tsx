@@ -230,7 +230,7 @@ export default function GoalsScreen() {
   const getRiskColor = (risk: string) => {
     switch (risk) {
       case "Low":
-        return "#0AA7B8";
+        return "#10605A";
       case "Medium":
         return "#5CCAD4";
       case "High":
@@ -244,12 +244,12 @@ export default function GoalsScreen() {
     goal: Goal,
   ): { label: string; color: string } => {
     if (goal.history.length === 0)
-      return { label: "On Track", color: "#0AA7B8" };
+      return { label: "On Track", color: "#10605A" };
     const latest = goal.history[goal.history.length - 1];
     const diff = latest.actualReturn - goal.expectedReturn;
     if (diff > 0.5) return { label: "Outperforming", color: "#00C853" };
     if (diff < -0.5) return { label: "Underperforming", color: "#FF6B6B" };
-    return { label: "On Track", color: "#0AA7B8" };
+    return { label: "On Track", color: "#10605A" };
   };
 
   const renderGoalCard = ({ item }: { item: Goal }) => {
@@ -323,7 +323,7 @@ export default function GoalsScreen() {
             Expected Return: {item.expectedReturn}% p.a.
           </Text>
           {projectedValue >= item.targetAmount && (
-            <Text style={[styles.goalDetail, { color: "#0AA7B8" }]}>
+            <Text style={[styles.goalDetail, { color: "#10605A" }]}>
               ✓ On Track
             </Text>
           )}
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     color: "#1A1A1A",
   },
   addButton: {
-    backgroundColor: "#0AA7B8",
+    backgroundColor: "#10605A",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   goalTarget: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#0AA7B8",
+    color: "#10605A",
   },
   performanceBadge: {
     flexDirection: "row",
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#0AA7B8",
+    backgroundColor: "#10605A",
     borderRadius: 3,
   },
   emptyState: {
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
   reviewValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#0AA7B8",
+    color: "#10605A",
   },
   inputGroup: {
     marginBottom: 16,
@@ -847,14 +847,14 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: "#0AA7B8",
+    borderColor: "#10605A",
     borderRadius: 4,
     marginRight: 8,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#0AA7B8",
+    backgroundColor: "#10605A",
   },
   checkmark: {
     color: "#FFFFFF",
@@ -909,7 +909,7 @@ const styles = StyleSheet.create({
   },
   optionSIP: {
     fontSize: 14,
-    color: "#0AA7B8",
+    color: "#10605A",
     fontWeight: "600",
   },
   modalButtons: {

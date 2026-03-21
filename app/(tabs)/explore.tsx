@@ -140,7 +140,7 @@ const FUNDS: Fund[] = [
     tagline: "Best of both worlds — equity + debt.",
     icon: "git-merge-outline",
     avgRate: 11,
-    color: "#0AA7B8",
+    color: "#10605A",
     riskLabel: "Moderate",
     riskScore: 3,
     horizon: "3–5 Years",
@@ -220,7 +220,7 @@ function TopCalculator() {
   return (
     <View style={cs.card}>
       <View style={cs.titleRow}>
-        <Ionicons name="calculator" size={20} color="#0AA7B8" />
+        <Ionicons name="calculator" size={20} color="#10605A" />
         <Text style={cs.title}>Investment Calculator</Text>
       </View>
 
@@ -501,7 +501,7 @@ const cs = StyleSheet.create({
     backgroundColor: TabTheme.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(10,167,184,0.35)",
+    borderColor: "rgba(16,96,90,0.35)",
     padding: 18,
     marginBottom: 24,
   },
@@ -525,7 +525,7 @@ const cs = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-  toggleOn: { backgroundColor: "#0AA7B8" },
+  toggleOn: { backgroundColor: "#10605A" },
   toggleTxt: { fontSize: 13, fontWeight: "600", color: "#999" },
   toggleTxtOn: { color: "#FFF" },
   label: {
@@ -546,7 +546,7 @@ const cs = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  prefix: { fontSize: 17, fontWeight: "700", color: "#0AA7B8", marginRight: 4 },
+  prefix: { fontSize: 17, fontWeight: "700", color: "#10605A", marginRight: 4 },
   suffix: { fontSize: 14, color: "#9A9A9A", marginLeft: 6 },
   input: {
     flex: 1,

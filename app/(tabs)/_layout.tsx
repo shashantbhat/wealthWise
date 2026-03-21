@@ -36,20 +36,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="chart.bar.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="goals"
         options={{
           title: "Goals",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={26} name="target" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="portfolio"
+        options={{
+          title: "Portfolio",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="pie-chart-outline" size={26} color={color} />
           ),
         }}
       />
@@ -63,11 +63,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="portfolio"
+        name="explore"
         options={{
-          title: "Portfolio",
+          title: "Explore",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="pie-chart-outline" size={26} color={color} />
+            <IconSymbol size={26} name="chart.bar.fill" color={color} />
           ),
         }}
       />

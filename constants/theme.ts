@@ -5,7 +5,7 @@
 
 import { Platform } from "react-native";
 
-const tintColorLight = "#0a7ea4";
+const tintColorLight = "#10605A";
 const tintColorDark = "#fff";
 
 export const Colors = {
@@ -34,11 +34,11 @@ export const TabTheme = {
   text: "#1A1A1A",
   textMuted: "#777777",
   border: "#E8E8E8",
-  accent: "#0AA7B8",
+  accent: "#10605A",
   tabBarBg: "#13131E",
   tabBarBorder: "#1F1F2E",
   tabBarInactive: "#5A5A6E",
-  tabBarActive: "#0AA7B8",
+  tabBarActive: "#10605A",
 };
 
 export const Fonts = Platform.select({

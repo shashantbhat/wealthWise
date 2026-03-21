@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#0AA7B8",
+    color: "#10605A",
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 12,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   },
   pickerButtonArrow: {
     fontSize: 18,
-    color: "#0AA7B8",
+    color: "#10605A",
   },
   summaryCard: {
     backgroundColor: "rgba(255, 255, 255, 0.35)",
@@ -148,13 +148,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   saveBtn: {
-    backgroundColor: "#0AA7B8",
+    backgroundColor: "#10605A",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
     elevation: 2,
-    shadowColor: "#0AA7B8",
+    shadowColor: "#10605A",
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -303,7 +303,7 @@ export default function ProfileScreen() {
                         {
                           color:
                             persona === editProfile.persona
-                              ? "#0AA7B8"
+                              ? "#10605A"
                               : "#1A1A1A",
                           fontWeight:
                             persona === editProfile.persona ? "700" : "500",
@@ -419,7 +419,7 @@ export default function ProfileScreen() {
                         {
                           color:
                             level === editProfile.riskLevel
-                              ? "#0AA7B8"
+                              ? "#10605A"
                               : "#1A1A1A",
                           fontWeight:
                             level === editProfile.riskLevel ? "700" : "500",
