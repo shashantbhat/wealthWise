@@ -98,10 +98,8 @@ function normalizeHoldingsResponse(payload: unknown): RawHolding[] {
   return [];
 }
 
-export async function fetchDhanHoldings(
-  apiKey: string,
-): Promise<DhanHolding[]> {
-  const response = await fetch(`${DHAN_BASE_URL}/holdings`, {
+async function requestDhan(path: string, apiKey: string): Promise<unknown> {
+  const response = await fetch(`${DHAN_BASE_URL}${path}`, {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -135,6 +133,13 @@ export async function fetchDhanHoldings(
     throw new Error(message);
   }
 
+  return parsedBody;
+}
+
+export async function fetchDhanHoldings(
+  apiKey: string,
+): Promise<DhanHolding[]> {
+  const parsedBody = await requestDhan("/holdings", apiKey);
   const rawHoldings = normalizeHoldingsResponse(parsedBody);
   return rawHoldings.map(parseHolding);
 }
