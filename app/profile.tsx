@@ -19,8 +19,6 @@ import {
   View,
 } from "react-native";
 
-// ─── Field definitions ─────────────────────────────────────────────────────────
-
 type FieldType =
   | "text"
   | "number"
@@ -391,109 +389,113 @@ export default function ProfileScreen() {
                         )}
                       </TouchableOpacity>
 
-                      {/* ── Inline Edit Panel ── */}
+                      {/* Edit Panel for the field */}
                       {isActive && (
                         <View
-                          style={[
-                            styles.editPanel,
-                            !isLast && styles.editPanelBorder,
-                          ]}
+                          style={[styles.editPanel, styles.editPanelBorder]}
                         >
                           <Text style={styles.editQuestion}>
                             {field.question}
                           </Text>
 
-                          {/* Text / Number input */}
-                          {(field.type === "text" ||
-                            field.type === "number") && (
+                          {field.type === "text" && (
                             <>
                               <TextInput
                                 style={styles.textInput}
+                                placeholder={field.label}
                                 value={String(editValue)}
-                                onChangeText={(t) => setEditValue(t)}
-                                keyboardType={
-                                  field.type === "number"
-                                    ? "numeric"
-                                    : "default"
-                                }
+                                onChangeText={setEditValue}
                                 autoFocus
-                                placeholder={field.hint ?? ""}
-                                placeholderTextColor="#BBBBBB"
                               />
-                              {field.hint ? (
+                              {field.hint && (
                                 <Text style={styles.hintText}>
                                   {field.hint}
                                 </Text>
-                              ) : null}
+                              )}
                             </>
                           )}
 
-                          {/* Single choice chips */}
+                          {field.type === "number" && (
+                            <>
+                              <TextInput
+                                style={styles.textInput}
+                                placeholder="0"
+                                keyboardType="numeric"
+                                value={String(editValue)}
+                                onChangeText={setEditValue}
+                                autoFocus
+                              />
+                              {field.hint && (
+                                <Text style={styles.hintText}>
+                                  {field.hint}
+                                </Text>
+                              )}
+                            </>
+                          )}
+
                           {field.type === "single_choice" && field.options && (
                             <View style={styles.chipsContainer}>
-                              {field.options.map((opt) => {
-                                const selected = editValue === opt;
-                                return (
-                                  <TouchableOpacity
-                                    key={opt}
+                              {field.options.map((option) => (
+                                <TouchableOpacity
+                                  key={option}
+                                  style={[
+                                    styles.chip,
+                                    editValue === option && styles.chipSelected,
+                                  ]}
+                                  onPress={() => setEditValue(option)}
+                                >
+                                  <Text
                                     style={[
-                                      styles.chip,
-                                      selected && styles.chipSelected,
+                                      styles.chipText,
+                                      editValue === option &&
+                                        styles.chipTextSelected,
                                     ]}
-                                    onPress={() => setEditValue(opt)}
-                                    activeOpacity={0.75}
                                   >
-                                    <Text
-                                      style={[
-                                        styles.chipText,
-                                        selected && styles.chipTextSelected,
-                                      ]}
-                                    >
-                                      {opt}
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              })}
+                                    {option}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
                             </View>
                           )}
 
-                          {/* Multiple choice chips */}
                           {field.type === "multiple_choice" &&
                             field.options && (
                               <>
                                 <Text style={styles.multiHint}>
-                                  Select all that apply
+                                  Select one or more
                                 </Text>
                                 <View style={styles.chipsContainer}>
-                                  {field.options.map((opt) => {
-                                    const selected = (
-                                      editValue as string[]
-                                    ).includes(opt);
+                                  {field.options.map((option) => {
+                                    const isSelected = Array.isArray(editValue)
+                                      ? editValue.includes(option)
+                                      : false;
                                     return (
                                       <TouchableOpacity
-                                        key={opt}
+                                        key={option}
                                         style={[
                                           styles.chip,
-                                          selected && styles.chipSelected,
+                                          isSelected && styles.chipSelected,
                                         ]}
                                         onPress={() => {
-                                          const cur = editValue as string[];
-                                          setEditValue(
-                                            selected
-                                              ? cur.filter((v) => v !== opt)
-                                              : [...cur, opt],
-                                          );
+                                          if (Array.isArray(editValue)) {
+                                            setEditValue(
+                                              isSelected
+                                                ? editValue.filter(
+                                                    (v) => v !== option,
+                                                  )
+                                                : [...editValue, option],
+                                            );
+                                          }
                                         }}
-                                        activeOpacity={0.75}
                                       >
                                         <Text
                                           style={[
                                             styles.chipText,
-                                            selected && styles.chipTextSelected,
+                                            isSelected &&
+                                              styles.chipTextSelected,
                                           ]}
                                         >
-                                          {selected ? "\u2713  " : ""}
-                                          {opt}
+                                          {option}
                                         </Text>
                                       </TouchableOpacity>
                                     );
@@ -502,17 +504,16 @@ export default function ProfileScreen() {
                               </>
                             )}
 
-                          {/* Actions */}
                           <View style={styles.editActions}>
-                            <SecondaryButton
-                              text="Save"
-                              onPress={() => saveField(field)}
-                              style={styles.actionBtn}
-                            />
                             <PrimaryButton
-                              text="Cancel"
-                              onPress={cancelEdit}
+                              text="Save"
                               style={styles.actionBtn}
+                              onPress={() => saveField(field)}
+                            />
+                            <SecondaryButton
+                              text="Cancel"
+                              style={styles.actionBtn}
+                              onPress={cancelEdit}
                             />
                           </View>
                         </View>
@@ -524,8 +525,6 @@ export default function ProfileScreen() {
             </View>
           );
         })}
-
-        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
