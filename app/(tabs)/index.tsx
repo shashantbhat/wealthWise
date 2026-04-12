@@ -10,9 +10,10 @@ import { ReportTabs } from "@/components/home/ReportTabs";
 import { SpendingRingSection } from "@/components/home/SpendingRingSection";
 import { Expense, ReportType } from "@/components/home/types";
 import { VoiceLogModal } from "@/components/home/VoiceLogModal";
+import { useExpenses, type ExpenseCategory } from "@/context/expense-context";
 import { useUser } from "@/context/user-context";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { SafeAreaView, ScrollView, StatusBar, StyleSheet } from "react-native";
 
 const DEFAULT_BUDGETS: Record<string, number> = {
@@ -27,10 +28,11 @@ const DEFAULT_BUDGETS: Record<string, number> = {
 };
 
 export default function HomeScreen() {
-  const { userName, monthlyIncome, monthlySpent, addExpense } = useUser();
+  const { userName, monthlyIncome } = useUser();
+  const { currentMonth, todayExpenses, monthlyTotal, addExpense } =
+    useExpenses();
   const router = useRouter();
 
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [hideAmounts, setHideAmounts] = useState(false);
   const [selectedReportType, setSelectedReportType] =
     useState<ReportType>("monthly");
@@ -42,13 +44,22 @@ export default function HomeScreen() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showAlertsModal, setShowAlertsModal] = useState(false);
 
-  const spendingByCategory = expenses.reduce(
-    (acc, exp) => {
-      acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  // Convert context expenses to display format
+  const displayExpenses = useMemo<Expense[]>(() => {
+    if (!todayExpenses) return [];
+    return todayExpenses.expenses.map((exp, idx) => ({
+      id: idx,
+      category: exp.category,
+      amount: exp.amount,
+      description: exp.description || exp.category,
+      date: "Today",
+    }));
+  }, [todayExpenses]);
+
+  // Use context data for spending calculations
+  const spendingByCategory = useMemo(() => {
+    return currentMonth?.categoryBreakdown || {};
+  }, [currentMonth]);
 
   const exceededBudgets = Object.keys(budgets).filter(
     (category) =>
@@ -56,18 +67,21 @@ export default function HomeScreen() {
       spendingByCategory[category] > budgets[category],
   );
 
-  const totalLocalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const effectiveBudget = monthlyIncome > 0 ? monthlyIncome : 50000;
-  const progress = totalLocalSpent / effectiveBudget;
+  const progress = monthlyTotal / effectiveBudget;
   const percentage = Math.round(Math.min(progress, 1) * 100);
-  const isOverBudget = totalLocalSpent > effectiveBudget;
+  const isOverBudget = monthlyTotal > effectiveBudget;
 
-  const handleAddExpense = (expense: Omit<Expense, "id" | "date">) => {
-    setExpenses((prev) => [
-      { ...expense, id: prev.length + 1, date: "Today" },
-      ...prev,
-    ]);
-    addExpense(expense.amount);
+  const handleAddExpense = async (expense: Omit<Expense, "id" | "date">) => {
+    try {
+      await addExpense(
+        expense.category as ExpenseCategory,
+        expense.amount,
+        expense.description,
+      );
+    } catch (error) {
+      console.error("Error adding expense:", error);
+    }
   };
 
   return (
@@ -96,7 +110,7 @@ export default function HomeScreen() {
         <SpendingRingSection
           progress={progress}
           percentage={percentage}
-          totalLocalSpent={totalLocalSpent}
+          totalLocalSpent={monthlyTotal}
           effectiveBudget={effectiveBudget}
           isOverBudget={isOverBudget}
           hideAmounts={hideAmounts}
@@ -110,12 +124,13 @@ export default function HomeScreen() {
 
         <InsightsSection
           spendingByCategory={spendingByCategory}
-          monthlySpent={monthlySpent}
+          monthlySpent={monthlyTotal}
           hideAmounts={hideAmounts}
+          onPress={() => router.push("/insights")}
         />
 
         <RecentExpenses
-          expenses={expenses}
+          expenses={displayExpenses}
           hideAmounts={hideAmounts}
           onToggleHide={() => setHideAmounts((v) => !v)}
         />
@@ -152,7 +167,7 @@ export default function HomeScreen() {
         visible={showReportModal}
         onClose={() => setShowReportModal(false)}
         selectedReportType={selectedReportType}
-        expenses={expenses}
+        expenses={displayExpenses}
         hideAmounts={hideAmounts}
       />
 
