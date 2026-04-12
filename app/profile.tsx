@@ -1,22 +1,23 @@
+import { clearAllData, seedSampleData } from "@/app/utils/seedData";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { SecondaryButton } from "@/components/ui/secondary-button";
 import {
-  useUser,
-  type OnboardingData,
-  type Profile,
+    useUser,
+    type OnboardingData,
+    type Profile,
 } from "@/context/user-context";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 type FieldType =
@@ -526,6 +527,36 @@ export default function ProfileScreen() {
           );
         })}
       </ScrollView>
+
+      {/* Debug Section - Seed Data */}
+      <View style={styles.debugSection}>
+        <TouchableOpacity
+          style={[styles.debugButton, styles.seedButton]}
+          onPress={async () => {
+            try {
+              await seedSampleData();
+              alert("Sample data seeded! Refresh the app to see changes.");
+            } catch (error) {
+              alert("Error seeding data");
+            }
+          }}
+        >
+          <Text style={styles.debugButtonText}>📊 Seed Sample Data</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.debugButton, styles.clearButton]}
+          onPress={async () => {
+            try {
+              await clearAllData();
+              alert("All data cleared!");
+            } catch (error) {
+              alert("Error clearing data");
+            }
+          }}
+        >
+          <Text style={styles.debugButtonText}>🗑️ Clear All Data</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -743,5 +774,32 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     paddingVertical: 0,
+  },
+
+  // Debug section
+  debugSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#EEEEEE",
+  },
+  debugButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  seedButton: {
+    backgroundColor: "#14B8A6",
+  },
+  clearButton: {
+    backgroundColor: "#EF4444",
+  },
+  debugButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });
