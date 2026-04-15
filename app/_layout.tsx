@@ -9,7 +9,7 @@ import "react-native-reanimated";
 import "../global.css";
 
 import { GradientBackground } from "@/components/gradient-background";
-import { ExpenseProvider } from "@/context/expense-context";
+import { ExpenseProvider } from "@/context/expenseContextOptimized";
 import { UserProvider } from "@/context/user-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
