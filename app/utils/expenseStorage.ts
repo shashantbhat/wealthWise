@@ -501,3 +501,79 @@ export async function exportAllDataAsJSON(): Promise<string> {
 export async function clearAllExpenses(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEY);
 }
+
+// ─── Weekly View for Current Month ────────────────────────────────────────────
+
+/**
+ * Interface for weekly view with detailed transactions
+ */
+export interface WeeklyTransaction {
+  weekNumber: number;
+  startDate: string; // "YYYY-MM-DD"
+  endDate: string; // "YYYY-MM-DD"
+  weeklyTotal: number;
+  categoryBreakdown: Record<ExpenseCategory, number>;
+  days: DayData[]; // Detailed daily data for this week
+}
+
+/**
+ * Get current month's data grouped by weeks with detailed transactions
+ * Uses sequential week numbers relative to the month (1, 2, 3, 4)
+ */
+export async function getCurrentMonthByWeeks(): Promise<WeeklyTransaction[]> {
+  const month = await getCurrentMonthExpenses();
+
+  if (!month || month.days.length === 0) {
+    return [];
+  }
+
+  // Group by Monday of each week to get weeks within the month
+  const weekMap = new Map<string, DayData[]>();
+
+  month.days.forEach((day) => {
+    const date = new Date(day.date);
+    const monday = getMonday(date);
+    const mondayStr = getDateString(monday);
+
+    if (!weekMap.has(mondayStr)) {
+      weekMap.set(mondayStr, []);
+    }
+    weekMap.get(mondayStr)!.push(day);
+  });
+
+  // Convert to WeeklyTransaction with sequential numbering
+  const weeks: WeeklyTransaction[] = [];
+  let sequentialWeekNum = 1;
+
+  Array.from(weekMap.entries())
+    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+    .forEach(([mondayStr, days]) => {
+      const categoryBreakdown = initializeCategoryBreakdown();
+      let weeklyTotal = 0;
+
+      days.forEach((day) => {
+        day.expenses.forEach((expense) => {
+          categoryBreakdown[expense.category] += expense.amount;
+          weeklyTotal += expense.amount;
+        });
+      });
+
+      const firstDay = new Date(days[0].date);
+      const lastDay = new Date(days[days.length - 1].date);
+
+      weeks.push({
+        weekNumber: sequentialWeekNum,
+        startDate: getDateString(firstDay),
+        endDate: getDateString(lastDay),
+        weeklyTotal,
+        categoryBreakdown,
+        days: days.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        ),
+      });
+
+      sequentialWeekNum++;
+    });
+
+  return weeks;
+}

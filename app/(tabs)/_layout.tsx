@@ -57,6 +57,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="portfolio"
+        options={{
+          title: "Portfolio",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="briefcase-outline" size={26} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

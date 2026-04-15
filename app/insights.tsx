@@ -1,6 +1,9 @@
 import {
     ArchivedMonth,
+    DailyExpense,
     getAllArchivedMonths,
+    getCurrentMonthByWeeks,
+    WeeklyTransaction,
 } from "@/app/utils/expenseStorage";
 import PrimarySvgExpenseChart from "@/components/primary-expense-chart";
 import { useExpenses } from "@/context/expense-context";
@@ -45,6 +48,7 @@ export default function InsightsScreen() {
   const [archivedMonths, setArchivedMonths] = useState<ArchivedMonth[]>([]);
   const [monthSummaries, setMonthSummaries] = useState<MonthSummary[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<MonthSummary | null>(null);
+  const [weeklyData, setWeeklyData] = useState<WeeklyTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Load archived months
@@ -101,10 +105,18 @@ export default function InsightsScreen() {
             "November",
             "December",
           ];
+          // Skip if it's the same month/year as current month
+          const now = new Date();
+          if (
+            arch.year === now.getFullYear() &&
+            arch.month === now.getMonth() + 1
+          ) {
+            return;
+          }
           summaries.push({
             year: arch.year,
             month: arch.month,
-            monthName: monthNames[arch.month],
+            monthName: monthNames[arch.month - 1],
             total: arch.monthlyTotal,
             categoryBreakdown: arch.categoryBreakdown,
             isCurrentMonth: false,
@@ -124,6 +136,20 @@ export default function InsightsScreen() {
 
     loadData();
   }, [currentMonth]);
+
+  // Load weekly data for current month
+  useEffect(() => {
+    const loadWeeklyData = async () => {
+      if (selectedMonth?.isCurrentMonth) {
+        const weeks = await getCurrentMonthByWeeks();
+        setWeeklyData(weeks);
+      } else {
+        setWeeklyData([]);
+      }
+    };
+
+    loadWeeklyData();
+  }, [selectedMonth]);
 
   if (loading || contextLoading) {
     return (
@@ -255,9 +281,7 @@ export default function InsightsScreen() {
               (v) => v > 0,
             ) && (
               <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>
-                  Category Distribution
-                </Text>
+                <Text style={styles.sectionTitle}>Category Distribution</Text>
                 <PrimarySvgExpenseChart
                   categories={selectedMonth.categoryBreakdown}
                   total={selectedMonth.total}
@@ -308,6 +332,67 @@ export default function InsightsScreen() {
                 );
               })}
             </View>
+
+            {/* Weekly Transactions for Current Month */}
+            {selectedMonth?.isCurrentMonth && weeklyData.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Transactions by Week</Text>
+                {weeklyData.map((week) => (
+                  <View key={week.weekNumber} style={styles.weekContainer}>
+                    <View style={styles.weekHeader}>
+                      <View>
+                        <Text style={styles.weekTitle}>
+                          Week {week.weekNumber}
+                        </Text>
+                        <Text style={styles.weekDates}>
+                          {week.startDate} - {week.endDate}
+                        </Text>
+                      </View>
+                      <Text style={styles.weekTotal}>
+                        ₹{week.weeklyTotal.toFixed(0)}
+                      </Text>
+                    </View>
+
+                    {/* Days in this week */}
+                    {week.days.map((day) => (
+                      <View key={day.date} style={styles.dayContainer}>
+                        <Text style={styles.dayDate}>{day.date}</Text>
+                        {day.expenses.map((expense: DailyExpense) => {
+                          const category = EXPENSE_CATEGORIES.find(
+                            (c) => c.name === expense.category,
+                          );
+                          return (
+                            <View
+                              key={expense.id}
+                              style={styles.transactionRow}
+                            >
+                              <View style={styles.transactionInfo}>
+                                <Text style={styles.transactionIcon}>
+                                  {category?.icon || "💰"}
+                                </Text>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.transactionCategory}>
+                                    {expense.category}
+                                  </Text>
+                                  {expense.description && (
+                                    <Text style={styles.transactionDescription}>
+                                      {expense.description}
+                                    </Text>
+                                  )}
+                                </View>
+                              </View>
+                              <Text style={styles.transactionAmount}>
+                                ₹{expense.amount.toFixed(0)}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -466,5 +551,86 @@ const styles = StyleSheet.create({
   categoryValue: {
     fontWeight: "700",
     color: "#1F2937",
+  },
+  weekContainer: {
+    marginBottom: 20,
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
+    overflow: "hidden",
+  },
+  weekHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#E0F2F1",
+    borderBottomWidth: 1,
+    borderBottomColor: "#B2DFDB",
+  },
+  weekTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#00695C",
+    marginBottom: 4,
+  },
+  weekDates: {
+    fontSize: 12,
+    color: "#00897B",
+  },
+  weekTotal: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#00695C",
+  },
+  dayContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  dayDate: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+    marginBottom: 8,
+    textTransform: "uppercase",
+  },
+  transactionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: "#14B8A6",
+  },
+  transactionInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  transactionIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  transactionCategory: {
+    fontWeight: "600",
+    color: "#1F2937",
+    fontSize: 13,
+  },
+  transactionDescription: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginTop: 2,
+  },
+  transactionAmount: {
+    fontWeight: "700",
+    color: "#1F2937",
+    fontSize: 13,
+    marginLeft: 12,
   },
 });
