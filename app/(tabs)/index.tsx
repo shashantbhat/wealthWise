@@ -10,7 +10,10 @@ import { ReportTabs } from "@/components/home/ReportTabs";
 import { SpendingRingSection } from "@/components/home/SpendingRingSection";
 import { Expense, ReportType } from "@/components/home/types";
 import { VoiceLogModal } from "@/components/home/VoiceLogModal";
-import { useExpenses, type ExpenseCategory } from "@/context/expense-context";
+import {
+    useExpenses,
+    type ExpenseCategory,
+} from "@/context/expenseContextOptimized";
 import { useUser } from "@/context/user-context";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";

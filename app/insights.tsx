@@ -4,9 +4,9 @@ import {
     getAllArchivedMonths,
     getCurrentMonthByWeeks,
     WeeklyTransaction,
-} from "@/app/utils/expenseStorage";
+} from "@/app/utils/expenseStorageOptimized";
 import PrimarySvgExpenseChart from "@/components/primary-expense-chart";
-import { useExpenses } from "@/context/expense-context";
+import { useExpenses } from "@/context/expenseContextOptimized";
 import { useUser } from "@/context/user-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
