@@ -2,16 +2,20 @@ import { Button } from "@/components/ui/primary-button";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
 } from "react-native";
 import { CATEGORIES, formatINR } from "./constants";
+
+// ✅ Import recordAudio helpers
+import { startRecording, stopRecording } from "@/app/utils/recordAudio"
 
 type Props = {
   visible: boolean;
@@ -25,6 +29,40 @@ type Props = {
   spendingByCategory: Record<string, number>;
 };
 
+import { Audio } from "expo-av";
+
+let sound: Audio.Sound | null = null;
+
+export async function playRecording(uri: string) {
+  try {
+    if (sound) {
+      await sound.unloadAsync();
+      sound = null;
+    }
+
+    const result = await Audio.Sound.createAsync(
+      { uri },
+      { shouldPlay: true }
+    );
+
+    sound = result.sound;
+  } catch (error) {
+    console.log("Error playing recording:", error);
+  }
+}
+
+export async function stopPlayback() {
+  try {
+    if (sound) {
+      await sound.stopAsync();
+      await sound.unloadAsync();
+      sound = null;
+    }
+  } catch (error) {
+    console.log("Error stopping playback:", error);
+  }
+}
+
 export function VoiceLogModal({
   visible,
   onClose,
@@ -34,54 +72,110 @@ export function VoiceLogModal({
 }: Props) {
   const [voiceInput, setVoiceInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+
+  const transcribeAudio = async (uri: string) => {
+    setIsTranscribing(true);
+
+    try {
+      const formData = new FormData();
+
+      // @ts-ignore
+      formData.append("file", {
+        uri,
+        name: "audio.m4a",
+        type: "audio/m4a",
+      });
+
+      // ⚠️ Use your laptop IP (not localhost)
+      const response = await fetch("http://192.168.1.6:5001/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.text) {
+        setVoiceInput(data.text);
+      } else {
+        Alert.alert("Transcription Error", "Could not understand audio.");
+      }
+    } catch (err) {
+      console.log(err);
+      Alert.alert("Network Error", "Failed to connect to backend.");
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleStartRecording = async () => {
+    const started = await startRecording();
+    if (started) {
+      setIsRecording(true);
+    } else {
+      Alert.alert("Error", "Could not start recording.");
+    }
+  };
+
+  const handleStopRecording = async () => {
+    setIsRecording(false);
+
+    const uri = await stopRecording();
+    if (uri) {
+      setAudioUri(uri); // ✅ store uri here
+      transcribeAudio(uri);
+    } else {
+      Alert.alert("Error", "Could not stop recording properly.");
+    }
+  };
 
   const handleLog = () => {
     if (!voiceInput.trim()) {
       Alert.alert("Error", "Please say or enter your expense");
       return;
     }
-    const parts = voiceInput.toLowerCase().trim().split(" ");
-    const amount = parseFloat(parts[0]);
+
+    const cleanInput = voiceInput.replace(/[₹,]/g, "").trim();
+    const parts = cleanInput.toLowerCase().split(" ");
+
+    const amount = parseFloat(parts.find((p) => !isNaN(parseFloat(p))) || "0");
+
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert("Error", "Please start with the expense amount");
+      Alert.alert("Error", "Could not find a valid amount in your input.");
       return;
     }
 
     let category = "Other";
-    const voiceWords = parts.slice(1).join(" ");
+
     for (const cat of CATEGORIES) {
-      if (voiceWords.includes(cat.toLowerCase())) {
+      if (cleanInput.toLowerCase().includes(cat.toLowerCase())) {
         category = cat;
         break;
       }
     }
 
-    const description = voiceInput.substring(voiceInput.search(/\D/));
+    const description = cleanInput;
     const currentCategorySpend = spendingByCategory[category] || 0;
     const newCategorySpend = currentCategorySpend + amount;
     const categoryBudget = budgets[category];
-    const willExceed = newCategorySpend > categoryBudget;
+    const willExceed = categoryBudget && newCategorySpend > categoryBudget;
 
     onSubmit({ category, description: description || category, amount });
     setVoiceInput("");
-    setIsRecording(false);
     onClose();
 
     if (willExceed) {
       Alert.alert(
         "⚠️ Budget Alert",
-        `Expense of ${formatINR(amount)} logged! \n\nYour ${category} budget (${formatINR(categoryBudget)}) will be exceeded by ${formatINR(newCategorySpend - categoryBudget)}`,
-      );
-    } else {
-      Alert.alert(
-        "Success",
-        `Expense of ${formatINR(amount)} logged successfully!`,
+        `Expense of ${formatINR(amount)} logged! \n\nYour ${category} budget will be exceeded.`
       );
     }
   };
 
   const handleCancel = () => {
     setVoiceInput("");
+    setAudioUri(null);
     setIsRecording(false);
     onClose();
   };
@@ -102,60 +196,65 @@ export function VoiceLogModal({
             style={styles.voiceModalScroll}
           >
             <View style={styles.voiceInfo}>
-              <Text style={styles.voiceInfoText}>
-                Say the amount and category
-              </Text>
+              <Text style={styles.voiceInfoText}>Say the amount and category</Text>
               <Text style={styles.voiceExample}>
-                Example: &quot;₹500 food&quot; or &quot;₹2500 shopping&quot;
+                Example: "500 for food" or "2500 for shopping"
               </Text>
             </View>
 
             <TouchableOpacity
               style={[styles.recordBtn, isRecording && styles.recordBtnActive]}
-              onPress={() => setIsRecording(!isRecording)}
+              onPress={isRecording ? handleStopRecording : handleStartRecording}
+              disabled={isTranscribing}
             >
-              <Ionicons
-                name="mic-outline"
-                size={40}
-                color={isRecording ? "#555555" : "#1A1A1A"}
-              />
+              {isTranscribing ? (
+                <ActivityIndicator size="large" color="#1A1A1A" />
+              ) : (
+                <Ionicons
+                  name={isRecording ? "stop-circle" : "mic-outline"}
+                  size={40}
+                  color={isRecording ? "#FF4444" : "#1A1A1A"}
+                />
+              )}
+
               <Text style={styles.recordBtnText}>
-                {isRecording ? "Stop Recording" : "Start Recording"}
+                {isTranscribing
+                  ? "Processing..."
+                  : isRecording
+                  ? "Stop Recording"
+                  : "Start Recording"}
               </Text>
             </TouchableOpacity>
 
             {voiceInput ? (
               <View style={styles.voiceInputBox}>
-                <Text style={styles.voiceInputLabel}>You said:</Text>
+                <Text style={styles.voiceInputLabel}>Recognized Text:</Text>
                 <TextInput
                   style={styles.voiceInputField}
                   value={voiceInput}
                   onChangeText={setVoiceInput}
-                  placeholder="Or type your expense here..."
-                  placeholderTextColor="#666"
+                  multiline
                 />
-              </View>
-            ) : null}
-
-            {!voiceInput && isRecording ? (
-              <View style={styles.recordingIndicator}>
-                <View style={styles.recordingDot} />
-                <Text style={styles.recordingText}>Recording...</Text>
               </View>
             ) : null}
           </ScrollView>
 
           <View style={styles.modalButtons}>
+            <Button text="Cancel" onPress={handleCancel} style={styles.modalButton} />
             <Button
-              text="Cancel"
-              onPress={handleCancel}
-              style={styles.modalButton}
-            />
-            <Button
-              text={voiceInput ? "Log Expense" : "Skip"}
+              text={voiceInput ? "Log Expense" : "Close"}
               onPress={voiceInput ? handleLog : handleCancel}
               style={styles.modalButton}
+              disabled={isTranscribing}
             />
+            <Button
+              text="Play Recording"
+              onPress={() => {
+                if (audioUri) playRecording(audioUri);
+              }}
+            />
+
+            <Button text="Stop" onPress={stopPlayback} />
           </View>
         </View>
       </View>
@@ -219,24 +318,6 @@ const styles = StyleSheet.create({
   recordBtnText: {
     color: "#1A1A1A",
     fontSize: 16,
-    fontWeight: "600",
-  },
-  recordingIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 20,
-  },
-  recordingDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "#555555",
-  },
-  recordingText: {
-    color: "#555555",
-    fontSize: 14,
     fontWeight: "600",
   },
   voiceInputBox: {
