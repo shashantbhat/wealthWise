@@ -1,29 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CATEGORY_ICONS, formatINR } from "./constants";
 
 type Props = {
   spendingByCategory: Record<string, number>;
   monthlySpent: number;
   hideAmounts: boolean;
+  onPress?: () => void;
 };
 
 export function InsightsSection({
   spendingByCategory,
   monthlySpent,
   hideAmounts,
+  onPress,
 }: Props) {
   const displayAmount = (amount: number) =>
     hideAmounts ? "₹ ----" : formatINR(amount);
 
   return (
     <>
-      <Text style={styles.sectionTitle}>Insights</Text>
+      <TouchableOpacity onPress={onPress}>
+        <Text style={styles.sectionTitle}>Insights</Text>
+      </TouchableOpacity>
       {Object.keys(spendingByCategory).length === 0 ? (
         <Text style={styles.emptyText}>No expenses to analyze</Text>
       ) : (
-        <View style={styles.insightsContainer}>
+        <TouchableOpacity onPress={onPress} style={styles.insightsContainer}>
           {Object.entries(spendingByCategory)
             .sort((a, b) => b[1] - a[1])
             .map(([category, amount]) => {
@@ -59,7 +63,7 @@ export function InsightsSection({
                 </View>
               );
             })}
-        </View>
+        </TouchableOpacity>
       )}
     </>
   );

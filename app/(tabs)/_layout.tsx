@@ -40,15 +40,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="chart.bar.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="goals"
         options={{
           title: "Goals",
@@ -63,6 +54,15 @@ export default function TabLayout() {
           title: "Invest",
           tabBarIcon: ({ color }) => (
             <Ionicons name="trending-up-outline" size={26} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="portfolio"
+        options={{
+          title: "Portfolio",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="briefcase-outline" size={26} color={color} />
           ),
         }}
       />

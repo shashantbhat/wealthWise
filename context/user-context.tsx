@@ -1,4 +1,15 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import {
+    loadUserContext,
+    updateQuestionnaireAnswers,
+    updateUserProfile
+} from "@/app/utils/userContextStorage";
+import React, {
+    createContext,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 
 // ─── Raw answer map type ───────────────────────────────────────────────────────
 type RawAnswers = Record<string, string | string[] | number | boolean>;
@@ -84,9 +95,56 @@ const DEFAULT_ONBOARDING: OnboardingData = {
 
 // ─── Provider ──────────────────────────────────────────────────────────────────
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [answers, setAnswers] = useState<RawAnswers>({});
+  const [answers, setAnswersState] = useState<RawAnswers>({});
   const [monthlySpent, setMonthlySpent] = useState(0);
-  const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
+  const [profile, setProfileState] = useState<Profile>(DEFAULT_PROFILE);
+  const [loading, setLoading] = useState(true);
+
+  // Load user context from storage on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const context = await loadUserContext();
+        // Convert questionnaire answers to RawAnswers format
+        setAnswersState(context.questionnaireAnswers);
+        // Set profile from stored context
+        setProfileState({
+          name: context.profile.name,
+          persona: context.profile.persona,
+          monthlyIncome: context.profile.monthlyIncome,
+          salaryDay: context.profile.salaryDay,
+          riskLevel: context.profile.riskLevel,
+          baseCurrency: context.profile.baseCurrency,
+        });
+      } catch (error) {
+        console.error("Error loading user context:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  // Wrapper to persist answers to storage
+  const setAnswers = (newAnswers: RawAnswers) => {
+    setAnswersState(newAnswers);
+    updateQuestionnaireAnswers(newAnswers).catch((error) =>
+      console.error("Error saving questionnaire answers:", error),
+    );
+  };
+
+  // Wrapper to persist profile to storage
+  const setProfile = (newProfile: Profile) => {
+    setProfileState(newProfile);
+    updateUserProfile({
+      name: newProfile.name,
+      persona: newProfile.persona,
+      monthlyIncome: newProfile.monthlyIncome,
+      salaryDay: newProfile.salaryDay,
+      riskLevel: newProfile.riskLevel,
+      baseCurrency: newProfile.baseCurrency,
+    }).catch((error) => console.error("Error saving profile:", error));
+  };
 
   // Derive typed onboarding data whenever answers change
   const onboardingData = useMemo<OnboardingData>(
@@ -115,6 +173,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const addExpense = (amount: number) =>
     setMonthlySpent((prev) => prev + amount);
   const resetSpent = () => setMonthlySpent(0);
+
+  if (loading) {
+    // Return a context with defaults while loading
+    return (
+      <UserContext.Provider
+        value={{
+          answers,
+          setAnswers,
+          onboardingData,
+          profile,
+          setProfile,
+          userName,
+          monthlyIncome,
+          monthlySpent,
+          addExpense,
+          resetSpent,
+        }}
+      >
+        {children}
+      </UserContext.Provider>
+    );
+  }
 
   return (
     <UserContext.Provider

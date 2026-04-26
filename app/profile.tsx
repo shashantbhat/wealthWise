@@ -1,22 +1,23 @@
+import BackArrowIcon from "@/components/icons/back-button";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { SecondaryButton } from "@/components/ui/secondary-button";
 import {
-  useUser,
-  type OnboardingData,
-  type Profile,
+    useUser,
+    type OnboardingData,
+    type Profile,
 } from "@/context/user-context";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 type FieldType =
@@ -313,9 +314,9 @@ export default function ProfileScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{"\u2039"}</Text>
+          <BackArrowIcon size={18} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Profile</Text>
+        <Text style={styles.headerTitle}>My Profile</Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -525,6 +526,21 @@ export default function ProfileScreen() {
             </View>
           );
         })}
+
+        {/* Log Out Button */}
+        <View style={styles.logoutButtonContainer}>
+          <SecondaryButton
+            text="Log Out"
+            onPress={async () => {
+              try {
+                await resetUserContext();
+                router.replace("/onboarding");
+              } catch (error) {
+                alert("Error logging out");
+              }
+            }}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -540,7 +556,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) + 8 : 4,
@@ -550,9 +565,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(0,0,0,0.08)",
   },
   backBtn: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: 22,
+    marginRight: 16,
     backgroundColor: "rgba(0,0,0,0.07)",
     justifyContent: "center",
     alignItems: "center",
@@ -565,7 +581,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "600",
     color: "#1A1A1A",
     letterSpacing: -0.4,
   },
@@ -582,8 +598,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "500",
     color: "#14B8A6",
     letterSpacing: 1,
     textTransform: "uppercase",
