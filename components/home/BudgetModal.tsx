@@ -1,16 +1,20 @@
 import { Button } from "@/components/ui/primary-button";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { CATEGORIES, formatINR } from "./constants";
+import {
+  CATEGORIES,
+  formatINR,
+  loadCategories,
+} from "../../app/utils/constants";
 
 type Props = {
   visible: boolean;
@@ -32,8 +36,9 @@ export function BudgetModal({
   const [budgetInputs, setBudgetInputs] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(budgets).map(([k, v]) => [k, String(v)])),
   );
+  const [categories, setCategories] = useState([...CATEGORIES]);
 
-  // Sync inputs when modal opens so they reflect latest budget values
+  // Sync inputs and load categories when modal opens
   useEffect(() => {
     if (visible) {
       setBudgetInputs(
@@ -41,6 +46,10 @@ export function BudgetModal({
           Object.entries(budgets).map(([k, v]) => [k, String(v)]),
         ),
       );
+      // Load custom categories
+      loadCategories().then((loadedCategories) => {
+        setCategories([...loadedCategories]);
+      });
     }
   }, [visible, budgets]);
 
@@ -59,10 +68,10 @@ export function BudgetModal({
           <Text style={styles.modalTitle}>Set Category Budgets</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {CATEGORIES.map((category) => {
+            {categories.map((category) => {
               const spent = spendingByCategory[category] || 0;
-              const budgetLimit = budgets[category];
-              const isExceeded = spent > budgetLimit;
+              const budgetLimit = budgets[category] || 0;
+              const isExceeded = spent > budgetLimit && budgetLimit > 0;
               const pct = budgetLimit > 0 ? (spent / budgetLimit) * 100 : 0;
 
               return (

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { CATEGORY_ICONS, formatINR } from "./constants";
+import { CATEGORY_ICONS, formatINR } from "../../app/utils/constants";
 
 type Props = {
   spendingByCategory: Record<string, number>;

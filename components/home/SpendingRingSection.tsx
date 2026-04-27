@@ -2,7 +2,7 @@ import quotesData from "@/data/quotes.json";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { formatINR } from "./constants";
+import { formatINR } from "../../app/utils/constants";
 import { RING_SIZE, RingChart } from "./RingChart";
 
 function getRandomQuote(): string {

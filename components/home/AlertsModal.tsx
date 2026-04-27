@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/primary-button";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Modal, ScrollView, StyleSheet, Text, View } from "react-native";
-import { formatINR } from "./constants";
+import { formatINR } from "../../app/utils/constants";
 
 type Props = {
   visible: boolean;
