@@ -1,67 +1,87 @@
-const CATEGORY_KEYWORDS = {
-  Food: ["food", "lunch", "dinner", "breakfast", "restaurant", "snack", "khana"],
-  Travel: ["uber", "ola", "cab", "bus", "train", "auto", "taxi", "flight"],
-  Shopping: ["shirt", "jeans", "shoes", "clothes", "shopping", "buy", "bought", "purchase", "kapde"],
-  Health: ["doctor", "medicine", "hospital", "clinic", "dawai"],
-  Entertainment: ["movie", "netflix", "game", "concert", "show"],
-  Accommodation: ["hotel", "stay", "room", "hostel"],
-  Wellness: ["gym", "spa", "yoga", "massage"],
-};
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const SPENDING_KEYWORDS = [
-  "paid", "spent", "cost", "price", "buy", "bought", "purchase", "for",
-  "rupees", "rs", "₹",
-  "diya", "kharcha", "liye", "liya", "ka", "ke"
+const CATEGORY_LIST = [
+  "Food",
+  "Travel",
+  "Shopping",
+  "Health",
+  "Entertainment",
+  "Accommodation",
+  "Wellness",
+  "Bills",
+  "Education",
+  "Other",
 ];
+
+let genAI = null;
+
+function initializeGenAI() {
+  if (genAI) return genAI;
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("❌ GEMINI_API_KEY missing in env");
+  }
+
+  genAI = new GoogleGenerativeAI(apiKey);
+  return genAI;
+}
 
 export async function parseTranscriptToExpenses(transcript) {
   if (!transcript || transcript.trim().length === 0) return [];
 
-  const text = transcript.toLowerCase();
-  const expenses = [];
+  const ai = initializeGenAI();
+  const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-  const numberRegex = /\b\d{1,3}(?:,\d{3})*(?:\.\d+)?\b/g;
-  const matches = [...text.matchAll(numberRegex)];
+  const prompt = `
+You are an expense extraction assistant.
 
-  for (const match of matches) {
-    const amount = parseFloat(match[0].replace(/,/g, ""));
-    if (!amount || isNaN(amount)) continue;
+Extract ALL expenses from the transcript below.
+Return ONLY a valid JSON array.
 
-    const idx = match.index;
-    const startIndex = Math.max(0, idx - 60);
-    const endIndex = Math.min(text.length, idx + 60);
+Each object must contain:
+- amount (number)
+- category (one of: ${CATEGORY_LIST.join(", ")})
+- description (short string)
 
-    const context = text.substring(startIndex, endIndex);
+Rules:
+- If multiple expenses exist, return multiple objects.
+- Ignore OTPs, dates, phone numbers, and irrelevant numbers.
+- If category is unclear, use "Other".
+- Keep description under 80 characters.
+- Output must be ONLY JSON (no explanation, no markdown).
 
-    const isSpending = SPENDING_KEYWORDS.some((kw) => context.includes(kw));
-    if (!isSpending) continue;
+Transcript:
+"${transcript}"
+`;
 
-    let category = "Shopping"; // default
-    for (const cat of Object.keys(CATEGORY_KEYWORDS)) {
-      if (CATEGORY_KEYWORDS[cat].some((kw) => context.includes(kw))) {
-        category = cat;
-        break;
-      }
-    }
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
-    let description = context
-      .replace(match[0], "")
-      .replace(/₹|rs|rupees/gi, "")
+    // Gemini sometimes wraps JSON inside ```json ... ```
+    const cleaned = text
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
       .trim();
 
-    if (description.length > 100) description = description.substring(0, 100);
+    const expenses = JSON.parse(cleaned);
 
-    expenses.push({
-      amount: parseFloat(amount.toFixed(2)),
-      category,
-      description,
-    });
+    if (!Array.isArray(expenses)) return [];
+
+    return expenses
+      .filter((e) => typeof e.amount === "number" && e.amount > 0)
+      .map((e) => ({
+        amount: parseFloat(Number(e.amount).toFixed(2)),
+        category: CATEGORY_LIST.includes(e.category) ? e.category : "Other",
+        description: (e.description || "").toString().slice(0, 80),
+      }));
+  } catch (err) {
+    console.error("Gemini parsing failed:", err);
+    return [];
   }
-
-  return expenses;
 }
 
-// ✅ THIS EXPORT WAS MISSING
 export async function parseMultipleTranscripts(transcripts) {
   const results = [];
 

@@ -1,11 +1,15 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { createClient } from "@deepgram/sdk";
 import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
 import fs from "fs";
 import multer from "multer";
-import { parseTranscriptToExpenses } from "./parseExpenses.js";
-dotenv.config();
+import {
+  parseMultipleTranscripts,
+  parseTranscriptToExpenses,
+} from "./parseExpenses.js";
 
 const app = express();
 
@@ -19,6 +23,15 @@ if (!process.env.DEEPGRAM_API_KEY) {
   console.error("❌ DEEPGRAM_API_KEY is missing in .env");
   process.exit(1);
 }
+
+// Gemini Key
+if (!process.env.GEMINI_API_KEY) {
+  console.error("❌ GEMINI_API_KEY is missing in .env");
+  process.exit(1);
+}
+
+console.log("GEMINI KEY:", process.env.GEMINI_API_KEY);
+console.log("KEY LENGTH:", process.env.GEMINI_API_KEY?.length);
 
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 
@@ -42,7 +55,7 @@ app.post("/transcribe", upload.single("file"), async (req, res) => {
         model: "nova-2",
         smart_format: true,
         language: "en",
-      }
+      },
     );
 
     fs.unlinkSync(audioPath);
