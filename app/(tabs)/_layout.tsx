@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 
+import { AnalyticsIcon } from "@/components/analytics-icon";
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
@@ -64,6 +65,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="briefcase-outline" size={26} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: "Analytics",
+          tabBarIcon: ({ color }) => <AnalyticsIcon size={26} color={color} />,
         }}
       />
     </Tabs>

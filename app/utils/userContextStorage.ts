@@ -59,6 +59,16 @@ export interface UserContext {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "wealthwise_user_context";
+const BROKER_STORAGE_KEY = "wealthwise_broker_config";
+
+// ─── Broker Types ─────────────────────────────────────────────────────────────
+
+export interface BrokerConfig {
+  brokerId: string;
+  brokerName: string;
+  apiKey: string;
+  connectedAt: number;
+}
 
 const DEFAULT_PROFILE: UserProfile = {
   name: "User",
@@ -261,4 +271,54 @@ export async function isOnboardingComplete(): Promise<boolean> {
     context.questionnaireAnswers.user_name !== "" &&
     context.profile.monthlyIncome > 0
   );
+}
+
+// ─── Broker Functions ──────────────────────────────────────────────────────────
+
+/**
+ * Save broker configuration (API key)
+ */
+export async function saveBrokerConfig(config: BrokerConfig): Promise<void> {
+  try {
+    await AsyncStorage.setItem(BROKER_STORAGE_KEY, JSON.stringify(config));
+  } catch (error) {
+    console.error("Error saving broker config:", error);
+    throw error;
+  }
+}
+
+/**
+ * Load broker configuration
+ */
+export async function loadBrokerConfig(): Promise<BrokerConfig | null> {
+  try {
+    const stored = await AsyncStorage.getItem(BROKER_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored) as BrokerConfig;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error loading broker config:", error);
+    return null;
+  }
+}
+
+/**
+ * Get broker API key
+ */
+export async function getBrokerApiKey(): Promise<string | null> {
+  const config = await loadBrokerConfig();
+  return config?.apiKey ?? null;
+}
+
+/**
+ * Clear broker configuration
+ */
+export async function clearBrokerConfig(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(BROKER_STORAGE_KEY);
+  } catch (error) {
+    console.error("Error clearing broker config:", error);
+    throw error;
+  }
 }

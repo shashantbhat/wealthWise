@@ -2,6 +2,14 @@ import {
     MarketIndexSnapshot,
     fetchIndianIndices,
 } from "@/app/utils/marketIndices";
+import {
+    saveBrokerConfig,
+    loadBrokerConfig,
+    clearBrokerConfig,
+} from "@/app/utils/userContextStorage";
+import { fetchBrokerHoldings } from "@/app/utils/brokers/brokerHandler";
+import { SUPPORTED_BROKERS } from "@/app/utils/brokers/brokerConfig";
+import { DhanHolding } from "@/app/utils/dhanApi";
 import { TabTheme } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -16,6 +24,7 @@ import {
     View,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
+import { BrokerConnectModal } from "@/components/home/BrokerConnectModal";
 
 function formatIndexValue(value: number) {
   return value.toLocaleString("en-IN", {
@@ -130,6 +139,13 @@ export default function PortfolioScreen() {
   const [marketIndices, setMarketIndices] = useState<MarketIndexSnapshot[]>([]);
   const [indicesLoading, setIndicesLoading] = useState(true);
   const [indicesError, setIndicesError] = useState<string | null>(null);
+  
+  const [holdings, setHoldings] = useState<DhanHolding[]>([]);
+  const [holdingsLoading, setHoldingsLoading] = useState(false);
+  const [holdingsError, setHoldingsError] = useState<string | null>(null);
+  
+  const [brokerModalVisible, setBrokerModalVisible] = useState(false);
+  const [isBrokerConnected, setIsBrokerConnected] = useState(false);
 
   const loadIndices = useCallback(async (showSpinner: boolean) => {
     if (showSpinner) {
@@ -149,6 +165,73 @@ export default function PortfolioScreen() {
     }
   }, []);
 
+  const loadHoldings = useCallback(async (apiKey: string, brokerId: string) => {
+    setHoldingsLoading(true);
+    setHoldingsError(null);
+    try {
+      const brokerInfo = SUPPORTED_BROKERS[brokerId];
+      if (!brokerInfo) {
+        throw new Error("Invalid broker selected");
+      }
+      
+      const fetchedHoldings = await fetchBrokerHoldings(brokerInfo, apiKey);
+      setHoldings(fetchedHoldings);
+      return fetchedHoldings;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to load holdings";
+      setHoldingsError(errorMessage);
+      throw error;
+    } finally {
+      setHoldingsLoading(false);
+    }
+  }, []);
+
+  const handleBrokerConnect = useCallback(async (brokerId: string, apiKey: string) => {
+    try {
+      // Verify API key by fetching holdings
+      await loadHoldings(apiKey, brokerId);
+      
+      // Save broker configuration
+      const brokerInfo = SUPPORTED_BROKERS[brokerId];
+      await saveBrokerConfig({
+        brokerId,
+        brokerName: brokerInfo.displayName,
+        apiKey,
+        connectedAt: Date.now(),
+      });
+      
+      setIsBrokerConnected(true);
+    } catch (error) {
+      throw error;
+    }
+  }, [loadHoldings]);
+
+  const handleDisconnectBroker = useCallback(() => {
+    clearBrokerConfig().catch((error) =>
+      console.error("Error clearing broker config:", error),
+    );
+    setIsBrokerConnected(false);
+    setHoldings([]);
+    setHoldingsError(null);
+  }, []);
+
+  // Load broker config and holdings on mount
+  useEffect(() => {
+    const initializeBroker = async () => {
+      try {
+        const config = await loadBrokerConfig();
+        if (config?.apiKey && config?.brokerId) {
+          setIsBrokerConnected(true);
+          await loadHoldings(config.apiKey, config.brokerId);
+        }
+      } catch (error) {
+        console.error("Error loading broker config:", error);
+      }
+    };
+
+    initializeBroker();
+  }, [loadHoldings]);
+
   useEffect(() => {
     void loadIndices(true);
     const timer = setInterval(() => {
@@ -157,6 +240,22 @@ export default function PortfolioScreen() {
 
     return () => clearInterval(timer);
   }, [loadIndices]);
+
+  const totalInvested = useMemo(() => {
+    return holdings.reduce((sum, h) => sum + h.invested, 0);
+  }, [holdings]);
+
+  const totalCurrent = useMemo(() => {
+    return holdings.reduce((sum, h) => sum + h.current, 0);
+  }, [holdings]);
+
+  const totalGainLoss = useMemo(() => {
+    return totalCurrent - totalInvested;
+  }, [totalCurrent, totalInvested]);
+
+  const totalGainLossPercent = useMemo(() => {
+    return totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
+  }, [totalGainLoss, totalInvested]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -168,11 +267,33 @@ export default function PortfolioScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Your Portfolio</Text>
-          <Text style={styles.subtitle}>
-            Track total value, P&L, and holdings from your connected account.
-          </Text>
+        <View style={styles.headerContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Your Portfolio</Text>
+            <Text style={styles.subtitle}>
+              Track total value, P&L, and holdings from your connected account.
+            </Text>
+          </View>
+          <View style={styles.headerButtons}>
+            {isBrokerConnected && (
+              <TouchableOpacity
+                style={styles.disconnectButton}
+                onPress={handleDisconnectBroker}
+              >
+                <Ionicons name="close-circle" size={24} color="#FF4C43" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.addBrokerButton}
+              onPress={() => setBrokerModalVisible(true)}
+            >
+              <Ionicons
+                name={isBrokerConnected ? "swap-horizontal" : "add-circle"}
+                size={24}
+                color="#4A9EFF"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.indicesSection}>
@@ -223,15 +344,114 @@ export default function PortfolioScreen() {
         </View>
 
         <View style={styles.holdingsCard}>
-          <Text style={styles.holdingsTitle}>Holdings</Text>
-          <View style={styles.emptyState}>
-            <Ionicons name="wallet-outline" size={20} color="#8E98AD" />
-            <Text style={styles.emptyStateText}>
-              Holdings will appear here once connected.
-            </Text>
+          <View style={styles.holdingsHeader}>
+            <Text style={styles.holdingsTitle}>Holdings</Text>
+            {isBrokerConnected && (
+              <View style={styles.connectedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#29C983" />
+                <Text style={styles.connectedBadgeText}>Connected</Text>
+              </View>
+            )}
           </View>
+
+          {holdingsLoading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator color={TabTheme.accent} size="small" />
+              <Text style={styles.loadingText}>Loading holdings...</Text>
+            </View>
+          ) : holdings.length > 0 ? (
+            <View>
+              <View style={styles.portfolioSummary}>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Invested</Text>
+                  <Text style={styles.summaryValue}>₹{totalInvested.toFixed(0)}</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Current</Text>
+                  <Text style={styles.summaryValue}>₹{totalCurrent.toFixed(0)}</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Gain/Loss</Text>
+                  <Text
+                    style={[
+                      styles.summaryValue,
+                      {
+                        color: totalGainLoss >= 0 ? "#29C983" : "#FF4C43",
+                      },
+                    ]}
+                  >
+                    {totalGainLoss >= 0 ? "+" : ""}
+                    {totalGainLoss.toFixed(0)} ({totalGainLossPercent.toFixed(2)}%)
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.holdingsList}>
+                {holdings.map((holding, index) => {
+                  const gainLoss = holding.current - holding.invested;
+                  const gainLossPercent = holding.invested > 0 ? (gainLoss / holding.invested) * 100 : 0;
+                  const isPositive = gainLoss >= 0;
+
+                  return (
+                    <View
+                      key={holding.symbol}
+                      style={[
+                        styles.holdingItem,
+                        index !== holdings.length - 1 && styles.holdingItemBorder,
+                      ]}
+                    >
+                      <View style={styles.holdingLeft}>
+                        <Text style={styles.holdingSymbol}>{holding.symbol}</Text>
+                        <Text style={styles.holdingName}>{holding.name}</Text>
+                        <Text style={styles.holdingQty}>Qty: {holding.quantity}</Text>
+                      </View>
+                      <View style={styles.holdingRight}>
+                        <Text style={styles.holdingCurrentValue}>
+                          ₹{holding.current.toFixed(0)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.holdingGainLoss,
+                            {
+                              color: isPositive ? "#29C983" : "#FF4C43",
+                            },
+                          ]}
+                        >
+                          {isPositive ? "+" : ""}₹{gainLoss.toFixed(0)} ({gainLossPercent.toFixed(1)}%)
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="wallet-outline" size={20} color="#8E98AD" />
+              <Text style={styles.emptyStateText}>
+                {isBrokerConnected
+                  ? "No holdings found"
+                  : "Holdings will appear here once connected."}
+              </Text>
+            </View>
+          )}
+
+          {holdingsError && !holdingsLoading ? (
+            <View style={styles.errorState}>
+              <Text style={styles.errorText}>{holdingsError}</Text>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
+
+      <BrokerConnectModal
+        visible={brokerModalVisible}
+        onClose={() => setBrokerModalVisible(false)}
+        onConnect={handleBrokerConnect}
+        isLoading={holdingsLoading}
+      />
     </SafeAreaView>
   );
 }
@@ -246,8 +466,25 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 36,
   },
-  header: {
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 16,
+  },
+  header: {
+    flex: 1,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 8,
+    marginLeft: 12,
+  },
+  addBrokerButton: {
+    padding: 8,
+  },
+  disconnectButton: {
+    padding: 8,
   },
   indicesSection: {
     marginBottom: 14,
@@ -383,11 +620,105 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
   },
+  holdingsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
   holdingsTitle: {
     fontSize: 17,
     color: TabTheme.text,
     fontWeight: "700",
-    marginBottom: 8,
+  },
+  connectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(41, 201, 131, 0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  connectedBadgeText: {
+    fontSize: 11,
+    color: "#29C983",
+    fontWeight: "600",
+  },
+  portfolioSummary: {
+    flexDirection: "row",
+    backgroundColor: "rgba(74, 158, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(74, 158, 255, 0.15)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginBottom: 14,
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: TabTheme.textMuted,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: TabTheme.text,
+    fontWeight: "700",
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: "rgba(74, 158, 255, 0.2)",
+    marginHorizontal: 4,
+  },
+  holdingsList: {
+    marginTop: 4,
+  },
+  holdingItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  holdingItemBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: TabTheme.border,
+  },
+  holdingLeft: {
+    flex: 1,
+  },
+  holdingRight: {
+    alignItems: "flex-end",
+  },
+  holdingSymbol: {
+    fontSize: 14,
+    color: TabTheme.text,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  holdingName: {
+    fontSize: 12,
+    color: TabTheme.textMuted,
+    marginBottom: 4,
+  },
+  holdingQty: {
+    fontSize: 11,
+    color: TabTheme.textMuted,
+    fontWeight: "500",
+  },
+  holdingCurrentValue: {
+    fontSize: 14,
+    color: TabTheme.text,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  holdingGainLoss: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   emptyState: {
     alignItems: "center",
@@ -403,5 +734,28 @@ const styles = StyleSheet.create({
   emptyStateText: {
     color: TabTheme.textMuted,
     fontSize: 13,
+  },
+  loadingState: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 20,
+  },
+  loadingText: {
+    color: TabTheme.textMuted,
+    fontSize: 13,
+  },
+  errorState: {
+    backgroundColor: "rgba(206, 77, 77, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(206, 77, 77, 0.3)",
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+  },
+  errorText: {
+    color: "#CE4D4D",
+    fontSize: 12,
+    fontWeight: "500",
   },
 });
