@@ -2,7 +2,7 @@ import { startRecording, stopRecording } from "./recordAudio";
 import { addExpense } from "./expenseStorage";
 import type { ExpenseCategory } from "./expenseStorage";
 
-const BACKEND_URL = "http://192.168.1.4:5001"; // Match your laptop IP
+const BACKEND_URL = "http://192.168.1.9:5001"; // Match your laptop IP
 
 /**
  * Record audio and transcribe it to text

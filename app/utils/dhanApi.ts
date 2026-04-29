@@ -1,6 +1,7 @@
 const DHAN_BASE_URL = "https://api.dhan.co/v2";
 
 type RawHolding = Record<string, unknown>;
+type RawPosition = Record<string, unknown>;
 
 export interface DhanHolding {
   symbol: string;
@@ -10,6 +11,18 @@ export interface DhanHolding {
   lastPrice: number;
   invested: number;
   current: number;
+}
+
+export interface DhanPosition {
+  symbol: string;
+  name: string;
+  quantity: number;
+  entryPrice: number;
+  lastPrice: number;
+  positionValue: number;
+  unrealisedPnl: number;
+  unrealisedPnlPercent: number;
+  positionType: "INTRADAY" | "OVERNIGHT" | "UNKNOWN";
 }
 
 function toNumber(value: unknown): number {
@@ -142,4 +155,87 @@ export async function fetchDhanHoldings(
   const parsedBody = await requestDhan("/holdings", apiKey);
   const rawHoldings = normalizeHoldingsResponse(parsedBody);
   return rawHoldings.map(parseHolding);
+}
+
+function normalizePositionsResponse(payload: unknown): RawPosition[] {
+  if (Array.isArray(payload)) {
+    return payload as RawPosition[];
+  }
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as Record<string, unknown>;
+
+    if (Array.isArray(typedPayload.data)) {
+      return typedPayload.data as RawPosition[];
+    }
+
+    if (Array.isArray(typedPayload.positions)) {
+      return typedPayload.positions as RawPosition[];
+    }
+  }
+
+  return [];
+}
+
+function parsePosition(rawPosition: RawPosition): DhanPosition {
+  const quantity = toNumber(
+    rawPosition.quantity ?? rawPosition.qty ?? rawPosition.totalQty,
+  );
+  const entryPrice = toNumber(
+    rawPosition.entryPrice ??
+      rawPosition.avgPrice ??
+      rawPosition.buyAvg ??
+      rawPosition.buyPrice,
+  );
+  const lastPrice = toNumber(
+    rawPosition.ltp ??
+      rawPosition.lastTradedPrice ??
+      rawPosition.currentPrice ??
+      rawPosition.lastPrice,
+  );
+
+  const positionValue = lastPrice * quantity;
+  const entryValue = entryPrice * quantity;
+  const unrealisedPnl = positionValue - entryValue;
+  const unrealisedPnlPercent =
+    entryValue !== 0 ? (unrealisedPnl / entryValue) * 100 : 0;
+
+  let positionType: "INTRADAY" | "OVERNIGHT" | "UNKNOWN" = "UNKNOWN";
+  const typeStr = String(
+    rawPosition.positionType ?? rawPosition.type ?? "",
+  ).toUpperCase();
+  if (typeStr.includes("INTRADAY") || typeStr.includes("MIS")) {
+    positionType = "INTRADAY";
+  } else if (typeStr.includes("OVERNIGHT") || typeStr.includes("CNC")) {
+    positionType = "OVERNIGHT";
+  }
+
+  return {
+    symbol: firstString([
+      rawPosition.tradingSymbol,
+      rawPosition.customSymbol,
+      rawPosition.securityId,
+      rawPosition.dhanUniqueKey,
+    ]),
+    name: firstString([
+      rawPosition.companyName,
+      rawPosition.tradingSymbol,
+      rawPosition.securityId,
+    ]),
+    quantity,
+    entryPrice,
+    lastPrice,
+    positionValue,
+    unrealisedPnl,
+    unrealisedPnlPercent,
+    positionType,
+  };
+}
+
+export async function fetchDhanPositions(
+  apiKey: string,
+): Promise<DhanPosition[]> {
+  const parsedBody = await requestDhan("/positions", apiKey);
+  const rawPositions = normalizePositionsResponse(parsedBody);
+  return rawPositions.map(parsePosition);
 }

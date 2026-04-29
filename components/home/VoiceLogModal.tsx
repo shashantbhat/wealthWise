@@ -93,7 +93,7 @@ export function VoiceLogModal({
       });
 
       // ⚠️ Use your laptop IP (not localhost)
-      const response = await fetch("http://192.168.1.4:5001/transcribe", {
+      const response = await fetch("http://192.168.1.9:5001/transcribe", {
         method: "POST",
         body: formData,
       });

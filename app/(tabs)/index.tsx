@@ -1,3 +1,4 @@
+import { loadBudgets, saveBudgets } from "@/app/utils/budgetsGoalsStorage";
 import { AlertsModal } from "@/components/home/AlertsModal";
 import { BudgetModal } from "@/components/home/BudgetModal";
 import { HomeHeader } from "@/components/home/HomeHeader";
@@ -16,19 +17,8 @@ import {
 } from "@/context/expenseContextOptimized";
 import { useUser } from "@/context/user-context";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SafeAreaView, ScrollView, StatusBar, StyleSheet } from "react-native";
-
-const DEFAULT_BUDGETS: Record<string, number> = {
-  Food: 5000,
-  Travel: 3000,
-  Shopping: 4000,
-  Health: 2000,
-  Entertainment: 2000,
-  Accommodation: 8000,
-  Wellness: 1500,
-  Other: 1000,
-};
 
 export default function HomeScreen() {
   const { userName, monthlyIncome } = useUser();
@@ -39,13 +29,28 @@ export default function HomeScreen() {
   const [hideAmounts, setHideAmounts] = useState(false);
   const [selectedReportType, setSelectedReportType] =
     useState<ReportType>("monthly");
-  const [budgets, setBudgets] =
-    useState<Record<string, number>>(DEFAULT_BUDGETS);
+  const [budgets, setBudgets] = useState<Record<string, number>>({});
   const [showManualModal, setShowManualModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showAlertsModal, setShowAlertsModal] = useState(false);
+
+  // Load budgets on mount
+  useEffect(() => {
+    loadBudgets()
+      .then(setBudgets)
+      .catch((error) => console.error("Failed to load budgets:", error));
+  }, []);
+
+  // Save budgets whenever they change
+  useEffect(() => {
+    if (Object.keys(budgets).length > 0) {
+      saveBudgets(budgets).catch((error) =>
+        console.error("Failed to save budgets:", error),
+      );
+    }
+  }, [budgets]);
 
   // Convert context expenses to display format
   const displayExpenses = useMemo<Expense[]>(() => {
@@ -70,7 +75,8 @@ export default function HomeScreen() {
       spendingByCategory[category] > budgets[category],
   );
 
-  const effectiveBudget = monthlyIncome > 0 ? monthlyIncome : 50000;
+  const effectiveBudget =
+    monthlyIncome && monthlyIncome > 0 ? monthlyIncome : 50000;
   const progress = monthlyTotal / effectiveBudget;
   const percentage = Math.round(Math.min(progress, 1) * 100);
   const isOverBudget = monthlyTotal > effectiveBudget;
