@@ -9,6 +9,7 @@ import React, { useEffect, useState } from "react";
 import "react-native-reanimated";
 import "../global.css";
 
+import { loadCategories } from "@/app/utils/constants";
 import { isOnboardingComplete } from "@/app/utils/userContextStorage";
 import { GradientBackground } from "@/components/gradient-background";
 import { ExpenseProvider } from "@/context/expenseContextOptimized";
@@ -29,6 +30,8 @@ export default function RootLayout() {
       try {
         const isComplete = await isOnboardingComplete();
         setOnboardingDone(isComplete);
+        // Load categories on app start
+        await loadCategories();
       } catch (error) {
         console.error("Error checking onboarding status:", error);
         setOnboardingDone(false);

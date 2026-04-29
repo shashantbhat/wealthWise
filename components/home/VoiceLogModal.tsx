@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { CATEGORIES, formatINR } from "./constants";
+import { CATEGORIES, formatINR } from "../../app/utils/constants";
 
 // ✅ Import recordAudio helpers
 import { startRecording, stopRecording } from "@/app/utils/recordAudio";
@@ -212,7 +212,9 @@ export function VoiceLogModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Log Expense by Voice</Text>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Log Expense by Voice</Text>
+          </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -226,7 +228,6 @@ export function VoiceLogModal({
                 Example: "500 for food" or "2500 for shopping"
               </Text>
             </View>
-
             <TouchableOpacity
               style={[styles.recordBtn, isRecording && styles.recordBtnActive]}
               onPress={isRecording ? handleStopRecording : handleStartRecording}
@@ -250,8 +251,6 @@ export function VoiceLogModal({
                     : "Start Recording"}
               </Text>
             </TouchableOpacity>
-
-            console.log(voiceInput);
             {voiceInput ? (
               <View>
                 <View style={styles.voiceInputBox}>
@@ -304,24 +303,16 @@ export function VoiceLogModal({
 
           <View style={styles.modalButtons}>
             <Button
-              text="Cancel"
-              onPress={handleCancel}
-              style={styles.modalButton}
-            />
-            <Button
-              text={voiceInput ? "Log Expense" : "Close"}
-              onPress={voiceInput ? handleLog : handleCancel}
+              text={voiceInput ? "Log Expense" : "Play Recording"}
+              onPress={voiceInput ? handleLog : () => { if (audioUri) playRecording(audioUri); }}
               style={styles.modalButton}
               disabled={isTranscribing}
             />
             <Button
-              text="Play Recording"
-              onPress={() => {
-                if (audioUri) playRecording(audioUri);
-              }}
+              text="Close"
+              onPress={handleCancel}
+              style={[styles.modalButton, styles.secondaryButton]}
             />
-
-            <Button text="Stop" onPress={stopPlayback} />
           </View>
         </View>
       </View>
@@ -341,6 +332,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     maxHeight: "90%",
+    position: "relative",
   },
   modalTitle: {
     fontSize: 20,
@@ -348,6 +340,16 @@ const styles = StyleSheet.create({
     color: "#1A1A1A",
     marginBottom: 20,
     textAlign: "center",
+  },
+  modalHeader: {
+    marginBottom: 20,
+  },
+  closeButtonContainer: {
+    position: "absolute",
+    top: 12,
+    right: 24,
+    zIndex: 100,
+    padding: 8,
   },
   voiceModalScroll: { marginBottom: 16 },
   voiceInfo: {

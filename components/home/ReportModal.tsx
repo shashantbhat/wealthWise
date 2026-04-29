@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/primary-button";
 import React from "react";
 import { Modal, ScrollView, StyleSheet, Text, View } from "react-native";
-import { formatINR } from "./constants";
+import { formatINR } from "../../app/utils/constants";
 import { Expense, ReportType } from "./types";
 
 type Props = {
