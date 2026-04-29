@@ -3,8 +3,15 @@ import {
   calculateFutureValue,
   calculateRequiredSIP,
 } from "@/app/utils/goalCalculator";
+import {
+  loadGoals,
+  saveGoals,
+  Goal,
+  InvestmentOption,
+  HistoryEntry,
+} from "@/app/utils/budgetsGoalsStorage";
 import { Button } from "@/components/ui/primary-button";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -19,35 +26,6 @@ import {
   View,
 } from "react-native";
 
-interface Goal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  timeHorizon: number; // in years
-  currentCorpus: number; // initial investment
-  monthlySIP: number;
-  expectedReturn: number; // expected annual return
-  investmentOptions: InvestmentOption[];
-  history: HistoryEntry[];
-  createdAt: Date;
-}
-
-interface InvestmentOption {
-  name: string;
-  expectedReturn: number; // annual return percentage
-  risk: "Low" | "Medium" | "High";
-  monthlySIP?: number; // calculated SIP amount
-}
-
-interface HistoryEntry {
-  year: number;
-  portfolioValue: number;
-  extraAdded: number;
-  actualReturn: number; // actual annual return
-  notes?: string;
-}
-
-// Investment options with expected returns
 const INVESTMENT_OPTIONS: InvestmentOption[] = [
   { name: "Fixed Deposit", expectedReturn: 6.5, risk: "Low" },
   { name: "Balanced Advantage Fund", expectedReturn: 10, risk: "Medium" },
@@ -77,6 +55,22 @@ export default function GoalsScreen() {
   const [extraAdded, setExtraAdded] = useState("");
   const [actualReturn, setActualReturn] = useState("");
   const [updateNotes, setUpdateNotes] = useState("");
+
+  // Load goals on mount
+  useEffect(() => {
+    loadGoals()
+      .then(setGoals)
+      .catch((error) => console.error("Failed to load goals:", error));
+  }, []);
+
+  // Save goals whenever they change
+  useEffect(() => {
+    if (goals.length > 0) {
+      saveGoals(goals).catch((error) =>
+        console.error("Failed to save goals:", error),
+      );
+    }
+  }, [goals]);
 
   const formatINR = (amount: number) => {
     return "₹" + amount.toLocaleString("en-IN");
@@ -119,7 +113,7 @@ export default function GoalsScreen() {
       monthlySIP: Math.min(...optionsWithSIP.map((opt) => opt.monthlySIP || 0)),
       investmentOptions: optionsWithSIP,
       history: [],
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     };
 
     setGoals((prev) => [...prev, newGoal]);
