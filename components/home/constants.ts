@@ -25,7 +25,10 @@ export const CATEGORY_ICONS: Record<
   Wellness: "fitness-outline",
 };
 
-export function formatINR(amount: number): string {
+export function formatINR(amount: number | undefined | null): string {
+  if (amount === undefined || amount === null || !Number.isFinite(amount)) {
+    return "₹0";
+  }
   return "₹" + amount.toLocaleString("en-IN");
 }
 

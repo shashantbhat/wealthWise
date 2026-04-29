@@ -1,3 +1,4 @@
+import { loadBudgets, saveBudgets } from "@/app/utils/budgetsGoalsStorage";
 import { AlertsModal } from "@/components/home/AlertsModal";
 import { BudgetModal } from "@/components/home/BudgetModal";
 import { HomeHeader } from "@/components/home/HomeHeader";
@@ -15,9 +16,8 @@ import {
     type ExpenseCategory,
 } from "@/context/expenseContextOptimized";
 import { useUser } from "@/context/user-context";
-import { loadBudgets, saveBudgets } from "@/app/utils/budgetsGoalsStorage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SafeAreaView, ScrollView, StatusBar, StyleSheet } from "react-native";
 
 export default function HomeScreen() {
@@ -29,8 +29,7 @@ export default function HomeScreen() {
   const [hideAmounts, setHideAmounts] = useState(false);
   const [selectedReportType, setSelectedReportType] =
     useState<ReportType>("monthly");
-  const [budgets, setBudgets] =
-    useState<Record<string, number>>({});
+  const [budgets, setBudgets] = useState<Record<string, number>>({});
   const [showManualModal, setShowManualModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
@@ -76,7 +75,8 @@ export default function HomeScreen() {
       spendingByCategory[category] > budgets[category],
   );
 
-  const effectiveBudget = monthlyIncome > 0 ? monthlyIncome : 50000;
+  const effectiveBudget =
+    monthlyIncome && monthlyIncome > 0 ? monthlyIncome : 50000;
   const progress = monthlyTotal / effectiveBudget;
   const percentage = Math.round(Math.min(progress, 1) * 100);
   const isOverBudget = monthlyTotal > effectiveBudget;

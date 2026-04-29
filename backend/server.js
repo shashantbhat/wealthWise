@@ -7,8 +7,8 @@ import express from "express";
 import fs from "fs";
 import multer from "multer";
 import {
-  parseMultipleTranscripts,
-  parseTranscriptToExpenses,
+    parseMultipleTranscripts,
+    parseTranscriptToExpenses,
 } from "./parseExpenses.js";
 
 const app = express();
@@ -130,6 +130,48 @@ app.post("/parse-expenses-batch", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to parse batch expenses",
+      details: error.message,
+    });
+  }
+});
+
+// ----------------- GET POSITIONS -----------------
+app.get("/positions", async (req, res) => {
+  try {
+    const { apiKey } = req.query;
+
+    if (!apiKey || typeof apiKey !== "string") {
+      return res.status(400).json({
+        error: "API key is required as query parameter",
+      });
+    }
+
+    const response = await fetch("https://api.dhan.co/v2/positions", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "access-token": apiKey,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data.message || "Failed to fetch positions from Dhan API",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: data.data || data,
+    });
+  } catch (error) {
+    console.error("Error fetching positions:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch positions",
       details: error.message,
     });
   }

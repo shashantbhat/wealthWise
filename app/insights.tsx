@@ -10,7 +10,7 @@ import { useExpenses } from "@/context/expenseContextOptimized";
 import { useUser } from "@/context/user-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     SafeAreaView,
@@ -43,7 +43,7 @@ interface MonthSummary {
 
 export default function InsightsScreen() {
   const { currentMonth, loading: contextLoading } = useExpenses();
-  const { monthlyIncome } = useUser();
+  const { monthlyIncome, salaryDay = 1 } = useUser();
   const router = useRouter();
   const [archivedMonths, setArchivedMonths] = useState<ArchivedMonth[]>([]);
   const [monthSummaries, setMonthSummaries] = useState<MonthSummary[]>([]);
@@ -632,5 +632,211 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     fontSize: 13,
     marginLeft: 12,
+  },
+  nudgeCard: {
+    borderLeftWidth: 4,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  nudgeHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  nudgeTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    flex: 1,
+    marginRight: 8,
+  },
+  priorityBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  priorityText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  nudgeMessage: {
+    fontSize: 13,
+    color: "#4B5563",
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  nudgeAction: {
+    borderTopWidth: 1,
+    paddingTop: 10,
+  },
+  nudgeActionText: {
+    fontWeight: "600",
+    fontSize: 12,
+  },
+  savingsCard: {
+    backgroundColor: "#F8FAFB",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  savingsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  savingsItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  savingsLabel: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "600",
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  savingsValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+  savingsDivider: {
+    width: 1,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 8,
+    height: "100%",
+    minHeight: 50,
+  },
+  savingsMetricsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  savingsMetric: {
+    flex: 1,
+    alignItems: "center",
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  metricValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+  forecastCard: {
+    backgroundColor: "#F8FAFB",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  forecastRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  forecastItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  forecastLabel: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "600",
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  forecastValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+  forecastDivider: {
+    width: 1,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 8,
+    height: "100%",
+    minHeight: 50,
+  },
+  forecastProjection: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  projectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  projectionLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "600",
+  },
+  projectionValue: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  projectionSubtext: {
+    fontSize: 12,
+    color: "#9CA3AF",
+  },
+  trendItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  trendHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  trendInfo: {
+    flex: 1,
+  },
+  trendCategory: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 4,
+  },
+  trendValues: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  trendValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  trendPrevious: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginLeft: 8,
+  },
+  trendBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  trendBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

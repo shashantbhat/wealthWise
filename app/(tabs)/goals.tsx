@@ -1,29 +1,29 @@
 import {
-  adjustGoalProgress,
-  calculateFutureValue,
-  calculateRequiredSIP,
-} from "@/app/utils/goalCalculator";
-import {
-  loadGoals,
-  saveGoals,
-  Goal,
-  InvestmentOption,
-  HistoryEntry,
+    Goal,
+    HistoryEntry,
+    InvestmentOption,
+    loadGoals,
+    saveGoals,
 } from "@/app/utils/budgetsGoalsStorage";
-import { Button } from "@/components/ui/primary-button";
-import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  FlatList,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    adjustGoalProgress,
+    calculateFutureValue,
+    calculateRequiredSIP,
+} from "@/app/utils/goalCalculator";
+import { Button } from "@/components/ui/primary-button";
+import { useEffect, useState } from "react";
+import {
+    Alert,
+    FlatList,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const INVESTMENT_OPTIONS: InvestmentOption[] = [

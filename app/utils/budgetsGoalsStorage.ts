@@ -78,15 +78,12 @@ const CACHE_DURATION = 5000; // 5 seconds
 
 function isBudgetsCacheValid(): boolean {
   return (
-    cachedBudgets !== null &&
-    Date.now() - budgetsCacheExpiry < CACHE_DURATION
+    cachedBudgets !== null && Date.now() - budgetsCacheExpiry < CACHE_DURATION
   );
 }
 
 function isGoalsCacheValid(): boolean {
-  return (
-    cachedGoals !== null && Date.now() - goalsCacheExpiry < CACHE_DURATION
-  );
+  return cachedGoals !== null && Date.now() - goalsCacheExpiry < CACHE_DURATION;
 }
 
 function invalidateBudgetsCache(): void {
@@ -125,7 +122,9 @@ export async function loadBudgets(): Promise<Record<string, number>> {
 /**
  * Save budgets to AsyncStorage
  */
-export async function saveBudgets(budgets: Record<string, number>): Promise<void> {
+export async function saveBudgets(
+  budgets: Record<string, number>,
+): Promise<void> {
   try {
     const store: BudgetsStore = {
       budgets,
