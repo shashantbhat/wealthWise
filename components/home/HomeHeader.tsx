@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { getGreeting } from "./constants";
+import { getGreeting } from "../../app/utils/constants";
 
 type Props = {
   userName: string;

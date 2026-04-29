@@ -1,16 +1,23 @@
 import { Button } from "@/components/ui/primary-button";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { CATEGORIES, formatINR } from "./constants";
+import {
+  addCustomCategory,
+  CATEGORIES,
+  formatINR,
+  loadCategories,
+} from "../../app/utils/constants";
 
 type Props = {
   visible: boolean;
@@ -34,12 +41,31 @@ export function ManualLogModal({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Food");
+  const [customCategoryInput, setCustomCategoryInput] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [categories, setCategories] = useState([...CATEGORIES]);
+
+  // Load categories when modal opens
+  useEffect(() => {
+    if (visible) {
+      loadCategories().then((loadedCategories) => {
+        setCategories([...loadedCategories]);
+      });
+    }
+  }, [visible]);
 
   const handleSubmit = () => {
     if (!description.trim() || !amount.trim()) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
+
+    // If "Other" is selected and user wants to add custom category
+    if (category === "Other" && showCustomInput && customCategoryInput.trim()) {
+      handleAddCustomCategory();
+      return;
+    }
+
     const parsed = parseFloat(amount);
     if (isNaN(parsed) || parsed <= 0) {
       Alert.alert("Error", "Please enter a valid amount");
@@ -55,6 +81,8 @@ export function ManualLogModal({
     setDescription("");
     setAmount("");
     setCategory("Food");
+    setCustomCategoryInput("");
+    setShowCustomInput(false);
     onClose();
 
     if (willExceed) {
@@ -70,10 +98,57 @@ export function ManualLogModal({
     }
   };
 
+  const handleAddCustomCategory = async () => {
+    const trimmedName = customCategoryInput.trim();
+
+    if (!trimmedName) {
+      Alert.alert("Error", "Please enter a category name");
+      return;
+    }
+
+    const success = await addCustomCategory(trimmedName);
+
+    if (success) {
+      // Reload categories
+      const loadedCategories = await loadCategories();
+      setCategories([...loadedCategories]);
+      setCategory(trimmedName);
+      setShowCustomInput(false);
+      setCustomCategoryInput("");
+
+      Alert.alert(
+        "Success",
+        `Category "${trimmedName}" added! Now logging expense...`,
+      );
+
+      // Submit the expense with new category
+      const parsed = parseFloat(amount);
+      if (!isNaN(parsed) && parsed > 0) {
+        onSubmit({ category: trimmedName, description, amount: parsed });
+        setDescription("");
+        setAmount("");
+        setCategory("Food");
+        onClose();
+
+        Alert.alert(
+          "Success",
+          `Expense of ${formatINR(parsed)} logged to "${trimmedName}" successfully!`,
+        );
+      }
+    } else {
+      Alert.alert(
+        "Error",
+        `Could not add category "${trimmedName}". It may already exist.`,
+      );
+    }
+  };
+
   const handleCancel = () => {
     setDescription("");
     setAmount("");
     setCategory("Food");
+    setCustomCategoryInput("");
+    setShowCustomInput(false);
     onClose();
   };
 
@@ -85,75 +160,119 @@ export function ManualLogModal({
       onRequestClose={handleCancel}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Log Expense Manually</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoidingView}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Log Expense Manually</Text>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Amount (₹) *</Text>
-              <View style={styles.amountInputWrapper}>
-                <Text style={styles.currencySymbol}>₹</Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollViewContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Amount (₹) *</Text>
+                <View style={styles.amountInputWrapper}>
+                  <Text style={styles.currencySymbol}>₹</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    value={amount}
+                    onChangeText={setAmount}
+                    placeholder="0"
+                    keyboardType="decimal-pad"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description *</Text>
                 <TextInput
-                  style={styles.amountInput}
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
+                  style={styles.textInput}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="e.g., Lunch at cafe"
                   placeholderTextColor="#666"
                 />
               </View>
-            </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Description *</Text>
-              <TextInput
-                style={styles.textInput}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="e.g., Lunch at cafe"
-                placeholderTextColor="#666"
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Category</Text>
+                <View style={styles.categoryGrid}>
+                  {categories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.categoryBtn,
+                        category === cat && styles.categoryBtnActive,
+                      ]}
+                      onPress={() => {
+                        setCategory(cat);
+                        if (cat === "Other") {
+                          setShowCustomInput(true);
+                        } else {
+                          setShowCustomInput(false);
+                          setCustomCategoryInput("");
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryBtnText,
+                          category === cat && styles.categoryBtnTextActive,
+                        ]}
+                      >
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {showCustomInput && category === "Other" && (
+                  <View style={styles.customCategoryContainer}>
+                    <Text style={styles.customCategoryLabel}>
+                      Add New Category
+                    </Text>
+                    <View style={styles.customCategoryInput}>
+                      <TextInput
+                        style={styles.customCategoryField}
+                        value={customCategoryInput}
+                        onChangeText={setCustomCategoryInput}
+                        placeholder="e.g., Groceries, Fitness"
+                        placeholderTextColor="#999"
+                      />
+                      <TouchableOpacity
+                        style={styles.addCategoryBtn}
+                        onPress={handleAddCustomCategory}
+                      >
+                        <Text style={styles.addCategoryBtnText}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <Button
+                text="Cancel"
+                onPress={handleCancel}
+                style={styles.modalButton}
+              />
+              <Button
+                text={
+                  showCustomInput && category === "Other"
+                    ? "Add & Log"
+                    : "Log Expense"
+                }
+                onPress={handleSubmit}
+                style={styles.modalButton}
               />
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Category</Text>
-              <View style={styles.categoryGrid}>
-                {CATEGORIES.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[
-                      styles.categoryBtn,
-                      category === cat && styles.categoryBtnActive,
-                    ]}
-                    onPress={() => setCategory(cat)}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryBtnText,
-                        category === cat && styles.categoryBtnTextActive,
-                      ]}
-                    >
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalButtons}>
-            <Button
-              text="Cancel"
-              onPress={handleCancel}
-              style={styles.modalButton}
-            />
-            <Button
-              text="Log Expense"
-              onPress={handleSubmit}
-              style={styles.modalButton}
-            />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -165,12 +284,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.4)",
     justifyContent: "flex-end",
   },
+  keyboardAvoidingView: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
     maxHeight: "90%",
+  },
+  scrollViewContent: {
+    flexGrow: 1,
   },
   modalTitle: {
     fontSize: 20,
@@ -249,4 +375,47 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   modalButton: { flex: 1 },
+  customCategoryContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: "rgba(26, 26, 26, 0.05)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(26, 26, 26, 0.1)",
+  },
+  customCategoryLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#666666",
+    marginBottom: 8,
+  },
+  customCategoryInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  customCategoryField: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#1A1A1A",
+    fontSize: 13,
+  },
+  addCategoryBtn: {
+    width: 36,
+    height: 36,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addCategoryBtnText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
+  },
 });
