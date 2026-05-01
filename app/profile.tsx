@@ -1,23 +1,25 @@
+import { clearExpenseStore } from "@/app/utils/expenseStorageOptimized";
+import { resetUserContext } from "@/app/utils/userContextStorage";
 import BackArrowIcon from "@/components/icons/back-button";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { SecondaryButton } from "@/components/ui/secondary-button";
 import {
-    useUser,
-    type OnboardingData,
-    type Profile,
+  useUser,
+  type OnboardingData,
+  type Profile,
 } from "@/context/user-context";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type FieldType =
@@ -534,6 +536,7 @@ export default function ProfileScreen() {
             onPress={async () => {
               try {
                 await resetUserContext();
+                await clearExpenseStore();
                 router.replace("/onboarding");
               } catch (error) {
                 alert("Error logging out");
@@ -759,5 +762,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     paddingVertical: 0,
+  },
+
+  // Logout button
+  logoutButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    paddingBottom: 40,
   },
 });

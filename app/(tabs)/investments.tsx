@@ -162,7 +162,7 @@ function SIPCalculator() {
   return (
     <View style={calcS.card}>
       <View style={calcS.titleRow}>
-        <Ionicons name="calculator" size={19} color={INVEST_THEME.text} />
+        <Ionicons name="calculator" size={20} color="black" />
         <InvestText style={calcS.title}>Investment Calculator</InvestText>
       </View>
 
@@ -346,8 +346,6 @@ const calcS = StyleSheet.create({
   card: {
     backgroundColor: INVEST_THEME.surface,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: INVEST_THEME.border,
     padding: 18,
     marginBottom: 20,
     shadowColor: INVEST_THEME.shadow,
@@ -371,12 +369,13 @@ const calcS = StyleSheet.create({
     marginBottom: 14,
   },
   tBtn: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: "center" },
-  tOn: { backgroundColor: INVEST_THEME.text },
-  tTxt: { ...Typography.label, color: INVEST_THEME.textSoft },
+  tOn: { backgroundColor: "#1A1A1A" },
+  tTxt: { fontSize: 13, fontWeight: "600", color: "#999" },
   tOnTxt: { color: "#FFF" },
   label: {
-    ...Typography.hint,
-    color: INVEST_THEME.textSoft,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "black",
     textTransform: "uppercase",
     letterSpacing: 0.6,
     marginBottom: 6,
@@ -391,12 +390,8 @@ const calcS = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  prefix: { ...Typography.h5, color: INVEST_THEME.text, marginRight: 4 },
-  suffix: {
-    ...Typography.bodySmall,
-    color: INVEST_THEME.textSoft,
-    marginLeft: 6,
-  },
+  prefix: { fontSize: 17, fontWeight: "700", color: "#1A1A1A", marginRight: 4 },
+  suffix: { fontSize: 14, color: "#AAA", marginLeft: 6 },
   input: {
     flex: 1,
     ...Typography.h5,
@@ -1014,6 +1009,12 @@ function InvestmentCard({
               {item.expected_return_label}
             </InvestText>
           </View>
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color="#CCC"
+            style={{ alignSelf: "center" }}
+          />
         </View>
 
         {/* Meta row */}
@@ -1037,12 +1038,12 @@ function InvestmentCard({
         </View>
       </View>
 
-      <Ionicons
+      {/* <Ionicons
         name="chevron-forward"
         size={16}
         color={INVEST_THEME.textSoft}
         style={{ alignSelf: "center" }}
-      />
+      /> */}
     </TouchableOpacity>
   );
 }
@@ -1066,11 +1067,11 @@ const cardStyles = StyleSheet.create({
     elevation: 1,
   },
   accentBar: {
-    width: 4,
-    borderRadius: 2,
+    // width: 4,
+    // borderRadius: 2,
     marginRight: 14,
-    borderTopLeftRadius: 18,
-    borderBottomLeftRadius: 18,
+    // borderTopLeftRadius: 18,
+    // borderBottomLeftRadius: 18,
   },
   titleRow: {
     flexDirection: "row",

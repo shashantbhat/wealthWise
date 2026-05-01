@@ -13,6 +13,7 @@ import {
 } from "@/app/utils/goalCalculator";
 import { getCurrentMonthExpenses } from "@/app/utils/expenseStorageOptimized";
 import { Button } from "@/components/ui/primary-button";
+import { SecondaryButton } from "@/components/ui/secondary-button";
 import { useEffect, useState } from "react";
 import {
     Alert,
@@ -514,12 +515,10 @@ export default function GoalsScreen() {
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Financial Goals</Text>
-        <TouchableOpacity
-          style={styles.addButton}
+        <SecondaryButton
+          text="Add Goal"
           onPress={() => setShowCreateModal(true)}
-        >
-          <Text style={styles.addButtonText}>+ Add Goal</Text>
-        </TouchableOpacity>
+        />
       </View>
 
       <FlatList
@@ -613,7 +612,7 @@ export default function GoalsScreen() {
                   value={goalName}
                   onChangeText={setGoalName}
                   placeholder="e.g., Buy a Car"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#BBBBBB"
                 />
               </View>
 
@@ -625,7 +624,7 @@ export default function GoalsScreen() {
                   onChangeText={setTargetAmount}
                   placeholder="1500000"
                   keyboardType="numeric"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#BBBBBB"
                 />
               </View>
 
@@ -637,7 +636,7 @@ export default function GoalsScreen() {
                   onChangeText={setTimeHorizon}
                   placeholder="5"
                   keyboardType="numeric"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#BBBBBB"
                 />
               </View>
 
@@ -649,7 +648,7 @@ export default function GoalsScreen() {
                   onChangeText={setInitialCorpus}
                   placeholder="50000"
                   keyboardType="numeric"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#BBBBBB"
                 />
               </View>
 
@@ -804,7 +803,7 @@ export default function GoalsScreen() {
                   onChangeText={setPortfolioValue}
                   placeholder="500000"
                   keyboardType="numeric"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#BBBBBB"
                 />
               </View>
 
@@ -818,7 +817,7 @@ export default function GoalsScreen() {
                   onChangeText={setExtraAdded}
                   placeholder="0"
                   keyboardType="numeric"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#BBBBBB"
                 />
               </View>
 
@@ -835,7 +834,7 @@ export default function GoalsScreen() {
                   onChangeText={setActualReturn}
                   placeholder="10.5"
                   keyboardType="decimal-pad"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#BBBBBB"
                 />
               </View>
 
@@ -848,7 +847,7 @@ export default function GoalsScreen() {
                   placeholder="Market performance, inflation impact, etc."
                   multiline
                   numberOfLines={3}
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#BBBBBB"
                 />
               </View>
 
@@ -992,16 +991,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1A1A1A",
   },
-  addButton: {
-    backgroundColor: "#10605A",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  addButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
   goalsList: {
     padding: 20,
   },
@@ -1103,7 +1092,7 @@ const styles = StyleSheet.create({
   },
   goalDetail: {
     fontSize: 14,
-    color: "#666666",
+    color: "#BBBBBBBBBBBB",
     marginBottom: 4,
   },
   progressContainer: {
@@ -1116,7 +1105,7 @@ const styles = StyleSheet.create({
   },
   progressValue: {
     fontSize: 12,
-    color: "#666666",
+    color: "#BBBBBBBBBBBB",
     marginTop: 4,
   },
   progressBar: {
@@ -1166,7 +1155,7 @@ const styles = StyleSheet.create({
   },
   modalSubtitle: {
     fontSize: 14,
-    color: "#666666",
+    color: "#BBBBBBBBBBBB",
     marginBottom: 20,
     textAlign: "center",
   },
@@ -1191,7 +1180,7 @@ const styles = StyleSheet.create({
   },
   reviewLabel: {
     fontSize: 14,
-    color: "#666666",
+    color: "#BBBBBBBBBBBB",
   },
   reviewValue: {
     fontSize: 14,
@@ -1293,7 +1282,7 @@ const styles = StyleSheet.create({
   },
   optionReturn: {
     fontSize: 14,
-    color: "#666666",
+    color: "#BBBBBBBBBBBB",
     marginBottom: 4,
   },
   optionSIP: {

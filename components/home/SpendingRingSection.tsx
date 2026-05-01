@@ -4,6 +4,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { formatINR } from "../../app/utils/constants";
 import { RING_SIZE, RingChart } from "./RingChart";
+import { ReportType } from "./types";
 
 function getRandomQuote(): string {
   const allQuotes = quotesData.wealth_advice_quotes.flatMap(
@@ -13,6 +14,7 @@ function getRandomQuote(): string {
 }
 
 type Props = {
+  reportType: ReportType;
   progress: number;
   percentage: number;
   totalLocalSpent: number;
@@ -23,6 +25,7 @@ type Props = {
 };
 
 export function SpendingRingSection({
+  reportType,
   progress,
   percentage,
   totalLocalSpent,
@@ -34,12 +37,17 @@ export function SpendingRingSection({
   const displayAmount = (amount: number) =>
     hideAmounts ? "₹ ----" : formatINR(amount);
 
+  const titleLabel =
+    reportType === "weekly"
+      ? "Weekly Spending"
+      : reportType === "yearly"
+        ? "Yearly Spending"
+        : new Date().toLocaleDateString("en-US", { month: "long" });
+
   return (
     <View style={styles.ringSection}>
       <View style={styles.ringTitleRow}>
-        <Text style={styles.ringTitle}>
-          {new Date().toLocaleDateString("en-US", { month: "long" })}
-        </Text>
+        <Text style={styles.ringTitle}>{titleLabel}</Text>
         <TouchableOpacity style={styles.hideToggleBtn} onPress={onToggleHide}>
           <Ionicons
             name={hideAmounts ? "eye-outline" : "eye-off-outline"}

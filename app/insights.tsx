@@ -22,14 +22,24 @@ import {
     View,
 } from "react-native";
 
+const CATEGORY_ICONS: Record<string, any> = {
+  Food: "fast-food-outline",
+  Travel: "car-outline",
+  Shopping: "bag-handle-outline",
+  Health: "medkit-outline",
+  Entertainment: "film-outline",
+  Accommodation: "home-outline",
+  Wellness: "leaf-outline",
+};
+
 const EXPENSE_CATEGORIES = [
-  { name: "Food", icon: "🍔", color: "#FF6B6B" },
-  { name: "Travel", icon: "🚗", color: "#4ECDC4" },
-  { name: "Shopping", icon: "🛍️", color: "#FFE66D" },
-  { name: "Health", icon: "🏥", color: "#95E1D3" },
-  { name: "Entertainment", icon: "🎬", color: "#C7CEEA" },
-  { name: "Accommodation", icon: "🏠", color: "#FF9F43" },
-  { name: "Wellness", icon: "💆", color: "#A8E6CF" },
+  { name: "Food", color: "#1A1A1A" },
+  { name: "Travel", color: "#1A1A1A" },
+  { name: "Shopping", color: "#1A1A1A" },
+  { name: "Health", color: "#1A1A1A" },
+  { name: "Entertainment", color: "#1A1A1A" },
+  { name: "Accommodation", color: "#1A1A1A" },
+  { name: "Wellness", color: "#1A1A1A" },
 ];
 
 interface MonthSummary {
@@ -293,44 +303,46 @@ export default function InsightsScreen() {
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Spending by Category</Text>
               {EXPENSE_CATEGORIES.map((cat) => {
-                const amount = selectedMonth.categoryBreakdown[cat.name] || 0;
-                const percentage =
-                  selectedMonth.total > 0
-                    ? ((amount / selectedMonth.total) * 100).toFixed(1)
-                    : "0";
+  const amount = selectedMonth.categoryBreakdown[cat.name] || 0;
+  const percentage =
+    selectedMonth.total > 0
+      ? ((amount / selectedMonth.total) * 100).toFixed(1)
+      : "0";
 
-                return (
-                  <View key={cat.name}>
-                    {amount > 0 && (
-                      <View style={styles.categoryRow}>
-                        <View style={styles.categoryInfo}>
-                          <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.categoryName}>{cat.name}</Text>
-                            <View
-                              style={[
-                                styles.categoryBar,
-                                {
-                                  width: (amount / selectedMonth.total) * 250,
-                                  backgroundColor: cat.color,
-                                },
-                              ]}
-                            />
-                          </View>
-                        </View>
-                        <View style={styles.categoryAmount}>
-                          <Text style={styles.categoryPercent}>
-                            {percentage}%
-                          </Text>
-                          <Text style={styles.categoryValue}>
-                            ₹{amount.toFixed(0)}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
+  return (
+    <View key={cat.name}>
+      {amount > 0 && (
+        <View style={styles.categoryRow}>
+          <View style={styles.categoryInfo}>
+            {/* ✅ Ionicons replacing the emoji */}
+            <Ionicons
+              name={CATEGORY_ICONS[cat.name] ?? "card-outline"}
+              size={20}
+              color={cat.color}
+              style={styles.categoryIcon}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.categoryName}>{cat.name}</Text>
+              <View
+                style={[
+                  styles.categoryBar,
+                  {
+                    width: (amount / selectedMonth.total) * 250,
+                    backgroundColor: cat.color,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+          <View style={styles.categoryAmount}>
+            <Text style={styles.categoryPercent}>{percentage}%</Text>
+            <Text style={styles.categoryValue}>₹{amount.toFixed(0)}</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+})}
             </View>
 
             {/* Weekly Transactions for Current Month */}
@@ -358,35 +370,36 @@ export default function InsightsScreen() {
                       <View key={day.date} style={styles.dayContainer}>
                         <Text style={styles.dayDate}>{day.date}</Text>
                         {day.expenses.map((expense: DailyExpense) => {
-                          const category = EXPENSE_CATEGORIES.find(
-                            (c) => c.name === expense.category,
-                          );
-                          return (
-                            <View
-                              key={expense.id}
-                              style={styles.transactionRow}
-                            >
-                              <View style={styles.transactionInfo}>
-                                <Text style={styles.transactionIcon}>
-                                  {category?.icon || "💰"}
-                                </Text>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={styles.transactionCategory}>
-                                    {expense.category}
-                                  </Text>
-                                  {expense.description && (
-                                    <Text style={styles.transactionDescription}>
-                                      {expense.description}
-                                    </Text>
-                                  )}
-                                </View>
-                              </View>
-                              <Text style={styles.transactionAmount}>
-                                ₹{expense.amount.toFixed(0)}
-                              </Text>
-                            </View>
-                          );
-                        })}
+  const category = EXPENSE_CATEGORIES.find(
+    (c) => c.name === expense.category,
+  );
+  return (
+    <View key={expense.id} style={styles.transactionRow}>
+      <View style={styles.transactionInfo}>
+        {/* ✅ Ionicons replacing the emoji */}
+        <Ionicons
+          name={CATEGORY_ICONS[expense.category] ?? "card-outline"}
+          size={20}
+          color={category?.color ?? "#555"}
+          style={styles.transactionIcon}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.transactionCategory}>
+            {expense.category}
+          </Text>
+          {expense.description && (
+            <Text style={styles.transactionDescription}>
+              {expense.description}
+            </Text>
+          )}
+        </View>
+      </View>
+      <Text style={styles.transactionAmount}>
+        ₹{expense.amount.toFixed(0)}
+      </Text>
+    </View>
+  );
+})}
                       </View>
                     ))}
                   </View>
@@ -403,7 +416,7 @@ export default function InsightsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F0F0F0",
   },
   scrollView: {
     flex: 1,
@@ -431,10 +444,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   monthButtonActive: {
-    backgroundColor: "#14B8A6",
+    backgroundColor: "#1A1A1A",
   },
   monthButtonInactive: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#F8F8F8",
   },
   monthButtonText: {
     fontWeight: "600",
@@ -449,12 +462,12 @@ const styles = StyleSheet.create({
   budgetCard: {
     marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: "#14B8A6",
+    backgroundColor: "#F8F8F8",
     borderRadius: 16,
     padding: 24,
   },
   budgetCardTitle: {
-    color: "rgba(255, 255, 255, 0.9)",
+    color: "black",
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 16,
@@ -463,16 +476,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.3)",
+    borderBottomColor: "1A1A1A",
   },
   budgetLabel: {
-    color: "rgba(255, 255, 255, 0.75)",
+    color: "1A1A1A",
     fontSize: 12,
     fontWeight: "500",
     marginBottom: 4,
   },
   budgetAmount: {
-    color: "#FFFFFF",
+    color: "black",
     fontSize: 28,
     fontWeight: "700",
   },
@@ -488,18 +501,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressText: {
-    color: "rgba(255, 255, 255, 0.75)",
+    color: "black",
     fontSize: 12,
   },
   progressBar: {
     height: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "#F8F8F8",
     borderRadius: 4,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1A1A1A",
     borderRadius: 4,
   },
   sectionContainer: {
@@ -557,6 +570,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#F9FAFB",
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#1A1A1A"
   },
   weekHeader: {
     flexDirection: "row",
@@ -564,24 +579,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#F2F2F2",
+    borderBottomColor: "#1A1A1A",
     borderBottomWidth: 1,
-    borderBottomColor: "#B2DFDB",
+
   },
   weekTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#00695C",
+    color: "#1A1A1A",
     marginBottom: 4,
   },
   weekDates: {
     fontSize: 12,
-    color: "#00897B",
+    color: "#1A1A1A",
   },
   weekTotal: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#00695C",
+    color: "#1A1A1A",
   },
   dayContainer: {
     paddingHorizontal: 16,
@@ -605,8 +621,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     backgroundColor: "#FFFFFF",
     borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: "#14B8A6",
+    // borderLeftWidth: 3,
+    // borderLeftColor: "#14B8A6",
   },
   transactionInfo: {
     flex: 1,

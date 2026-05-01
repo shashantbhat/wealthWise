@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/primary-button";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
@@ -13,10 +12,9 @@ import {
   View,
 } from "react-native";
 import { CATEGORIES, formatINR } from "../../app/utils/constants";
+import { SecondaryButton } from "../ui/secondary-button";
 
-// ✅ Import recordAudio helpers
 import { startRecording, stopRecording } from "@/app/utils/recordAudio";
-// ✅ Import expense parsing
 import {
   ParsedExpense,
   parseTextToExpenses,
@@ -44,9 +42,7 @@ export async function playRecording(uri: string) {
       await sound.unloadAsync();
       sound = null;
     }
-
     const result = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
-
     sound = result.sound;
   } catch (error) {
     console.log("Error playing recording:", error);
@@ -81,10 +77,8 @@ export function VoiceLogModal({
 
   const transcribeAudio = async (uri: string) => {
     setIsTranscribing(true);
-
     try {
       const formData = new FormData();
-
       // @ts-ignore
       formData.append("file", {
         uri,
@@ -92,8 +86,7 @@ export function VoiceLogModal({
         type: "audio/m4a",
       });
 
-      // ⚠️ Use your laptop IP (not localhost)
-      const response = await fetch("http://192.168.1.9:5001/transcribe", {
+      const response = await fetch("http://192.168.1.3:5001/transcribe", {
         method: "POST",
         body: formData,
       });
@@ -102,7 +95,6 @@ export function VoiceLogModal({
 
       if (data.text) {
         setVoiceInput(data.text);
-        // 🎯 Parse the transcript to extract expenses
         await parseExpensesFromText(data.text);
       } else {
         Alert.alert("Transcription Error", "Could not understand audio.");
@@ -142,10 +134,9 @@ export function VoiceLogModal({
 
   const handleStopRecording = async () => {
     setIsRecording(false);
-
     const uri = await stopRecording();
     if (uri) {
-      setAudioUri(uri); // ✅ store uri here
+      setAudioUri(uri);
       transcribeAudio(uri);
     } else {
       Alert.alert("Error", "Could not stop recording properly.");
@@ -160,7 +151,6 @@ export function VoiceLogModal({
 
     const cleanInput = voiceInput.replace(/[₹,]/g, "").trim();
     const parts = cleanInput.toLowerCase().split(" ");
-
     const amount = parseFloat(parts.find((p) => !isNaN(parseFloat(p))) || "0");
 
     if (isNaN(amount) || amount <= 0) {
@@ -169,7 +159,6 @@ export function VoiceLogModal({
     }
 
     let category = "Other";
-
     for (const cat of CATEGORIES) {
       if (cleanInput.toLowerCase().includes(cat.toLowerCase())) {
         category = cat;
@@ -203,6 +192,46 @@ export function VoiceLogModal({
     onClose();
   };
 
+  const handleLogParsedExpenses = () => {
+    if (parsedExpenses.length === 0) {
+      Alert.alert("Error", "No expenses to log");
+      return;
+    }
+
+    // Log each parsed expense
+    let budgetWarnings: string[] = [];
+    parsedExpenses.forEach((expense) => {
+      onSubmit({
+        category: expense.category,
+        description: expense.description,
+        amount: expense.amount,
+      });
+
+      // Check for budget warnings
+      const currentCategorySpend = spendingByCategory[expense.category] || 0;
+      const newCategorySpend = currentCategorySpend + expense.amount;
+      const categoryBudget = budgets[expense.category];
+      if (categoryBudget && newCategorySpend > categoryBudget) {
+        budgetWarnings.push(
+          `${expense.category}: ${formatINR(expense.amount)}`,
+        );
+      }
+    });
+
+    setVoiceInput("");
+    setAudioUri(null);
+    setParsedExpenses([]);
+    onClose();
+
+    // Show success message
+    if (budgetWarnings.length > 0) {
+      Alert.alert(
+        "⚠️ Budget Alerts",
+        `${parsedExpenses.length} expense(s) logged!\n\nBudget exceeded for: ${budgetWarnings.join(", ")}`,
+      );
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -211,108 +240,120 @@ export function VoiceLogModal({
       onRequestClose={handleCancel}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Log Expense by Voice</Text>
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            style={styles.voiceModalScroll}
-          >
-            <View style={styles.voiceInfo}>
-              <Text style={styles.voiceInfoText}>
-                Say the amount and category
-              </Text>
-              <Text style={styles.voiceExample}>
-                Example: "500 for food" or "2500 for shopping"
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.recordBtn, isRecording && styles.recordBtnActive]}
-              onPress={isRecording ? handleStopRecording : handleStartRecording}
-              disabled={isTranscribing}
+        {/* ✅ Wrapper groups close button + sheet so they slide together */}
+        <View style={styles.modalWrapper}>
+          {/* ✅ Close button outside the white sheet, top-right, in normal flow */}
+          <TouchableOpacity
+              onPress={handleCancel}
+              style={styles.closeBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              {isTranscribing ? (
-                <ActivityIndicator size="large" color="#1A1A1A" />
-              ) : (
-                <Ionicons
-                  name={isRecording ? "stop-circle" : "mic-outline"}
-                  size={40}
-                  color={isRecording ? "#FF4444" : "#1A1A1A"}
-                />
-              )}
-
-              <Text style={styles.recordBtnText}>
-                {isTranscribing
-                  ? "Processing..."
-                  : isRecording
-                    ? "Stop Recording"
-                    : "Start Recording"}
-              </Text>
+              <Ionicons name="close-circle-outline" size={32} color="black" />
             </TouchableOpacity>
-            {voiceInput ? (
-              <View>
-                <View style={styles.voiceInputBox}>
-                  <Text style={styles.voiceInputLabel}>Recognized Text:</Text>
-                  <TextInput
-                    style={styles.voiceInputField}
-                    value={voiceInput}
-                    onChangeText={setVoiceInput}
-                    multiline
-                  />
-                </View>
 
-                {/* 🎯 Display Parsed Expenses */}
-                {isParsing ? (
-                  <View style={styles.parsingBox}>
-                    <ActivityIndicator size="small" color="#1A1A1A" />
-                    <Text style={styles.parsingText}>Parsing expenses...</Text>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Voice Expense Logger</Text>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.voiceModalScroll}
+            >
+              <View style={styles.voiceInfo}>
+                <Text style={styles.voiceInfoText}>
+                  Just say what you bought, and get it all logged
+                </Text>
+                <Text style={styles.voiceExample}>
+                  Example: "I bought pizza for 350 with a coke for 90 rupees..."
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.recordBtn,
+                  isRecording && styles.recordBtnActive,
+                ]}
+                onPress={
+                  isRecording ? handleStopRecording : handleStartRecording
+                }
+                disabled={isTranscribing}
+              >
+                {isTranscribing ? (
+                  <ActivityIndicator size="large" color="#1A1A1A" />
+                ) : (
+                  <Ionicons
+                    name={isRecording ? "stop-circle" : "mic-outline"}
+                    size={40}
+                    color={isRecording ? "#FF4444" : "#1A1A1A"}
+                  />
+                )}
+                <Text style={styles.recordBtnText}>
+                  {isTranscribing
+                    ? "Processing..."
+                    : isRecording
+                      ? "Stop Recording"
+                      : "Start Recording"}
+                </Text>
+              </TouchableOpacity>
+
+              {voiceInput ? (
+                <View>
+                  <View style={styles.voiceInputBox}>
+                    <Text style={styles.voiceInputLabel}>Recognized Text:</Text>
+                    <TextInput
+                      style={styles.voiceInputField}
+                      value={voiceInput}
+                      onChangeText={setVoiceInput}
+                      multiline
+                    />
                   </View>
-                ) : parsedExpenses.length > 0 ? (
-                  <View style={styles.parsedExpensesBox}>
-                    <Text style={styles.parsedExpensesLabel}>
-                      📊 Parsed Expenses ({parsedExpenses.length}):
-                    </Text>
-                    {parsedExpenses.map((expense, index) => (
-                      <View key={index} style={styles.expenseCard}>
-                        <View style={styles.expenseHeader}>
-                          <Text style={styles.expenseCategory}>
-                            {expense.category}
-                          </Text>
-                          <Text style={styles.expenseAmount}>
-                            ₹{expense.amount.toFixed(2)}
+                  {isParsing ? (
+                    <View style={styles.parsingBox}>
+                      <ActivityIndicator size="small" color="#1A1A1A" />
+                      <Text style={styles.parsingText}>
+                        Parsing expenses...
+                      </Text>
+                    </View>
+                  ) : parsedExpenses.length > 0 ? (
+                    <View style={styles.parsedExpensesBox}>
+                      <Text style={styles.parsedExpensesLabel}>
+                        Parsed Expenses ({parsedExpenses.length}):
+                      </Text>
+                      {parsedExpenses.map((expense, index) => (
+                        <View key={index} style={styles.expenseCard}>
+                          <View style={styles.expenseHeader}>
+                            <Text style={styles.expenseCategory}>
+                              {expense.category}
+                            </Text>
+                            <Text style={styles.expenseAmount}>
+                              ₹{expense.amount.toFixed(2)}
+                            </Text>
+                          </View>
+                          <Text style={styles.expenseDescription}>
+                            {expense.description}
                           </Text>
                         </View>
-                        <Text style={styles.expenseDescription}>
-                          {expense.description}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <View style={styles.noExpensesBox}>
-                    <Text style={styles.noExpensesText}>
-                      No expenses detected in the transcript
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ) : null}
-          </ScrollView>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.noExpensesBox}>
+                      <Text style={styles.noExpensesText}>
+                        No expenses detected in the transcript
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : null}
+            </ScrollView>
 
-          <View style={styles.modalButtons}>
-            <Button
-              text={voiceInput ? "Log Expense" : "Play Recording"}
-              onPress={voiceInput ? handleLog : () => { if (audioUri) playRecording(audioUri); }}
-              style={styles.modalButton}
-              disabled={isTranscribing}
-            />
-            <Button
-              text="Close"
-              onPress={handleCancel}
-              style={[styles.modalButton, styles.secondaryButton]}
-            />
+            {/* Log Button - Only show if parsed expenses exist */}
+            {parsedExpenses.length > 0 && (
+              <SecondaryButton
+                text={`Log ${parsedExpenses.length} Expense${parsedExpenses.length !== 1 ? "s" : ""}`}
+                onPress={handleLogParsedExpenses}
+              />
+            )}
           </View>
         </View>
       </View>
@@ -323,35 +364,38 @@ export function VoiceLogModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
+  },
+  // ✅ Groups close button + white sheet in normal vertical flow
+  modalWrapper: {
+    width: "100%",
+  },
+  // ✅ Sits above the white sheet, aligned to the right
+  closeBtn: {
+    alignSelf: "flex-end",
+    marginRight: 16,
+    marginBottom: 8,
   },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    maxHeight: "90%",
-    position: "relative",
+    maxHeight: "100%",
+  },
+  modalHeader: {
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#1A1A1A",
-    marginBottom: 20,
     textAlign: "center",
   },
-  modalHeader: {
-    marginBottom: 20,
+  voiceModalScroll: {
+    marginBottom: 16,
   },
-  closeButtonContainer: {
-    position: "absolute",
-    top: 12,
-    right: 24,
-    zIndex: 100,
-    padding: 8,
-  },
-  voiceModalScroll: { marginBottom: 16 },
   voiceInfo: {
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 12,
@@ -379,6 +423,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 0.5,
     borderColor: "rgba(255, 255, 255, 0.4)",
+  },
+  recordBtnActive: {
+    borderColor: "#555555",
+    backgroundColor: "#F0F0F0",
+  },
+  recordBtnText: {
+    color: "#1A1A1A",
+    fontSize: 16,
+    fontWeight: "600",
   },
   parsingBox: {
     backgroundColor: "#F0F0F0",
@@ -413,8 +466,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: "#4CAF50",
   },
   expenseHeader: {
     flexDirection: "row",
@@ -428,7 +479,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   expenseAmount: {
-    color: "#4CAF50",
+    color: "black",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -450,16 +501,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     textAlign: "center",
-    borderColor: "rgba(255, 255, 255, 0.4)",
-  },
-  recordBtnActive: {
-    borderColor: "#555555",
-    backgroundColor: "#F0F0F0",
-  },
-  recordBtnText: {
-    color: "#1A1A1A",
-    fontSize: 16,
-    fontWeight: "600",
   },
   voiceInputBox: {
     backgroundColor: "#F5F5F5",
@@ -482,10 +523,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 24,
-  },
-  modalButton: { flex: 1 },
 });
