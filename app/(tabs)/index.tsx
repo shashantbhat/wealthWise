@@ -173,15 +173,19 @@ export default function HomeScreen() {
   const percentage = Math.round(Math.min(progress, 1) * 100);
   const isOverBudget = displayData.total > effectiveBudgetCalc;
 
-  const handleAddExpense = async (expense: Omit<Expense, "id" | "date">) => {
+  const handleAddExpenses = async (
+    expenses: Omit<Expense, "id" | "date">[],
+  ) => {
     try {
-      await addExpense(
-        expense.category as ExpenseCategory,
-        expense.amount,
-        expense.description,
-      );
+      for (const expense of expenses) {
+        await addExpense(
+          expense.category as ExpenseCategory,
+          expense.amount,
+          expense.description,
+        );
+      }
     } catch (error) {
-      console.error("Error adding expense:", error);
+      console.error("Error adding expenses:", error);
     }
   };
 
@@ -291,7 +295,7 @@ export default function HomeScreen() {
       <ManualLogModal
         visible={showManualModal}
         onClose={() => setShowManualModal(false)}
-        onSubmit={handleAddExpense}
+        onSubmit={handleAddExpenses}
         budgets={budgets}
         spendingByCategory={spendingByCategory}
       />
@@ -299,7 +303,7 @@ export default function HomeScreen() {
       <VoiceLogModal
         visible={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
-        onSubmit={handleAddExpense}
+        onSubmit={handleAddExpenses}
         budgets={budgets}
         spendingByCategory={spendingByCategory}
       />
