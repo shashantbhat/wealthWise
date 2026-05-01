@@ -23,9 +23,15 @@ I've created a complete Firebase authentication system for your app with the fol
 - If you don't see a web app, click "Add app" and select Web
 - Copy your Firebase config values
 
-### 2. **Add Credentials to `.env.local`**
+### 2. **Setup Environment Variables**
 
-Replace the placeholder values in `.env.local` with your actual Firebase credentials:
+1. Copy `.env.example` to `.env.local`:
+
+```bash
+cp .env.example .env.local
+```
+
+2. Open `.env.local` and replace the placeholder values with your actual Firebase credentials:
 
 ```
 EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyD...
@@ -35,6 +41,8 @@ EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=yourproject.appspot.com
 EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 EXPO_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123def456
 ```
+
+**⚠️ Important:** `.env.local` is in `.gitignore` and should NEVER be committed to git. Each developer must create their own `.env.local` file locally.
 
 ### 3. **Enable Email/Password Authentication in Firebase**
 

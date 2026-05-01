@@ -2,6 +2,53 @@
 
 A comprehensive financial wellness app built with React Native and Expo.
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm or yarn
+- Expo CLI: `npm install -g expo-cli`
+
+### Installation
+
+1. **Clone the repository**
+
+```bash
+git clone <repository-url>
+cd wealthWise
+```
+
+2. **Install dependencies**
+
+```bash
+npm install
+```
+
+3. **Setup Firebase Configuration**
+
+The app uses Firebase for authentication. You need to set up your environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+Then edit `.env.local` and add your Firebase credentials from [Firebase Console](https://console.firebase.google.com).
+
+See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for detailed Firebase setup instructions.
+
+4. **Run the app**
+
+```bash
+npm start
+```
+
+Then press:
+
+- `i` for iOS simulator
+- `a` for Android emulator
+- `w` for web
+
 ## Features
 
 ### Goals Tab
