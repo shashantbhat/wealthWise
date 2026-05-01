@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
     color: "#fff",
-    ...Typography.bodySmall,
+    // ...Typography.bodySmall,
   },
   buttonContainer: {
     gap: 12,
