@@ -27,7 +27,7 @@ type Props = {
     category: string;
     description: string;
     amount: number;
-  }) => void;
+  }[]) => void;
   budgets: Record<string, number>;
   spendingByCategory: Record<string, number>;
 };

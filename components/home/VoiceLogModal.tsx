@@ -23,11 +23,11 @@ import {
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (expense: {
+  onSubmit: (expenses: {
     category: string;
     description: string;
     amount: number;
-  }) => void;
+  }[]) => void;
   budgets: Record<string, number>;
   spendingByCategory: Record<string, number>;
 };
@@ -200,13 +200,8 @@ export function VoiceLogModal({
 
     // Log each parsed expense
     let budgetWarnings: string[] = [];
+    onSubmit(parsedExpenses);
     parsedExpenses.forEach((expense) => {
-      onSubmit({
-        category: expense.category,
-        description: expense.description,
-        amount: expense.amount,
-      });
-
       // Check for budget warnings
       const currentCategorySpend = spendingByCategory[expense.category] || 0;
       const newCategorySpend = currentCategorySpend + expense.amount;
