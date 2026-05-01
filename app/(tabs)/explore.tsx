@@ -3,6 +3,7 @@ import {
   getAllArchivedMonths,
   MonthlyData,
 } from "@/app/utils/expenseStorageOptimized";
+import { Fonts, Typography } from "@/constants/theme";
 import { useExpenses } from "@/context/expenseContextOptimized";
 import { useUser } from "@/context/user-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,6 +19,210 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
+
+const ANALYTICS_THEME = {
+  background: "#FFFFFF",
+  surface: "#F7F7F8",
+  surfaceStrong: "#EEEEF0",
+  border: "#D7D9DE",
+  text: "#111111",
+  muted: "#666666",
+  accent: "#111111",
+  teal: "#8E8E8E",
+  violet: "#A8A8A8",
+  pink: "#757575",
+  amber: "#B5B5B5",
+  red: "#9E9E9E",
+  green: "#D0D0D0",
+};
+
+const CHART_WIDTH = Dimensions.get("window").width - 88;
+
+function formatMonthLabel(month: number, year: number): string {
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return `${monthNames[month - 1]} ${year}`;
+}
+
+function formatCompactINR(amount: number): string {
+  if (!Number.isFinite(amount)) {
+    return "₹0";
+  }
+
+  const absolute = Math.abs(amount);
+  const sign = amount < 0 ? "-" : "";
+
+  if (absolute >= 1e7) {
+    return `${sign}₹${(absolute / 1e7).toFixed(1)}Cr`;
+  }
+
+  if (absolute >= 1e5) {
+    return `${sign}₹${(absolute / 1e5).toFixed(1)}L`;
+  }
+
+  if (absolute >= 1e3) {
+    return `${sign}₹${(absolute / 1e3).toFixed(1)}K`;
+  }
+
+  return `${sign}₹${Math.round(absolute).toLocaleString("en-IN")}`;
+}
+
+function buildSparklinePath(values: number[], width: number, height: number) {
+  if (values.length === 0) {
+    const flat = height / 2;
+    return {
+      linePath: `M0 ${flat} L${width} ${flat}`,
+      areaPath: `M0 ${height} L0 ${flat} L${width} ${flat} L${width} ${height} Z`,
+    };
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(1, max - min);
+  const stepX = values.length > 1 ? width / (values.length - 1) : width;
+
+  const points = values.map((value, index) => ({
+    x: index * stepX,
+    y: height - ((value - min) / range) * height,
+  }));
+
+  const linePath = points
+    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`)
+    .join(" ");
+  const first = points[0];
+  const last = points[points.length - 1];
+
+  return {
+    linePath,
+    areaPath: `M${first.x} ${height} ${linePath.replaceAll("M", "L")} L${last.x} ${height} Z`,
+  };
+}
+
+function getCategoryAccent(category: string) {
+  const accents: Record<string, string> = {
+    Food: "#D1D1D1",
+    Travel: "#BDBDBD",
+    Shopping: "#A8A8A8",
+    Health: "#E0E0E0",
+    Entertainment: "#C2C2C2",
+    Accommodation: "#D8D8D8",
+    Wellness: "#F0F0F0",
+  };
+
+  return accents[category] ?? ANALYTICS_THEME.accent;
+}
+
+function getCategoryHistory(trend: CategoryTrend) {
+  const values = [trend.previousMonth, trend.currentMonth].map((value) =>
+    Math.max(0, value),
+  );
+  const hasMovement = values.some((value) => value > 0);
+  return hasMovement ? values : [0, 1];
+}
+
+function MetricPill({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  tone: string;
+}) {
+  return (
+    <View style={styles.metricPill}>
+      <View style={[styles.metricIconWrap, { backgroundColor: `${tone}1F` }]}>
+        <Ionicons name={icon} size={18} color={tone} />
+      </View>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricValue, { color: tone }]} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function InsightCard({ nudge }: { nudge: SmartNudge }) {
+  const colors = {
+    warning: {
+      ring: "#A9A9A9",
+      fill: "rgba(169, 169, 169, 0.16)",
+      badge: "rgba(169, 169, 169, 0.18)",
+    },
+    achievement: {
+      ring: "#D9D9D9",
+      fill: "rgba(217, 217, 217, 0.16)",
+      badge: "rgba(217, 217, 217, 0.18)",
+    },
+    suggestion: {
+      ring: "#BFBFBF",
+      fill: "rgba(191, 191, 191, 0.16)",
+      badge: "rgba(191, 191, 191, 0.18)",
+    },
+    forecast: {
+      ring: "#CFCFCF",
+      fill: "rgba(207, 207, 207, 0.16)",
+      badge: "rgba(207, 207, 207, 0.18)",
+    },
+  }[nudge.type];
+
+  const iconByType: Record<SmartNudge["type"], keyof typeof Ionicons.glyphMap> =
+    {
+      warning: "trending-down-outline",
+      achievement: "trophy-outline",
+      suggestion: "bulb-outline",
+      forecast: "calendar-outline",
+    };
+
+  return (
+    <View style={[styles.insightCard, { borderColor: colors.ring + "55" }]}>
+      <View style={[styles.insightRing, { borderColor: colors.ring }]}>
+        <View
+          style={[styles.insightIconFill, { backgroundColor: colors.fill }]}
+        >
+          <Ionicons
+            name={iconByType[nudge.type]}
+            size={18}
+            color={colors.ring}
+          />
+        </View>
+      </View>
+
+      <View style={styles.insightBody}>
+        <View style={styles.insightHeader}>
+          <Text style={styles.insightTitle}>{nudge.title}</Text>
+          <View
+            style={[styles.priorityBadge, { backgroundColor: colors.badge }]}
+          >
+            <Text style={[styles.priorityText, { color: colors.ring }]}>
+              {nudge.priority === "high"
+                ? "High Priority"
+                : nudge.priority === "medium"
+                  ? "Medium"
+                  : "Low"}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.insightMessage}>{nudge.message}</Text>
+      </View>
+    </View>
+  );
+}
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -322,16 +527,33 @@ export default function AnalyticsScreen() {
     );
   }
 
+  const income = monthlyIncome || 0;
+  const expenses = currentMonth?.monthlyTotal || 0;
+  const savingsAmount = Math.max(0, income - expenses);
+  const savingsRate = income > 0 ? (savingsAmount / income) * 100 : 0;
+  const targetRate = savingsMetrics?.targetSavingsRate ?? 20;
+  const daysRemaining =
+    forecast?.daysRemaining ?? Math.max(0, 30 - new Date().getDate());
+  const sortedTrends = [...categoryTrends]
+    .filter((trend) => trend.currentMonth > 0 || trend.previousMonth > 0)
+    .sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent));
+  const insightsCount = nudges.length;
+  const forecastProjection = forecast
+    ? Math.min((forecast.projectedTotal / Math.max(1, income)) * 100, 140)
+    : 0;
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={ANALYTICS_THEME.background}
+      />
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Analytics</Text>
           <Text style={styles.headerSubtitle}>
@@ -349,6 +571,7 @@ export default function AnalyticsScreen() {
                     styles.insightIconBox,
                     { backgroundColor: card.color + "18" },
                   ]}
+                  numberOfLines={1}
                 >
                   <Ionicons
                     name={card.icon as any}
@@ -508,10 +731,22 @@ export default function AnalyticsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: ANALYTICS_THEME.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: ANALYTICS_THEME.background,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: ANALYTICS_THEME.background,
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   header: {
     paddingHorizontal: 24,

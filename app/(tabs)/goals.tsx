@@ -4,12 +4,14 @@ import {
     InvestmentOption,
     loadGoals,
     saveGoals,
+    loadBudgets,
 } from "@/app/utils/budgetsGoalsStorage";
 import {
     adjustGoalProgress,
     calculateFutureValue,
     calculateRequiredSIP,
 } from "@/app/utils/goalCalculator";
+import { getCurrentMonthExpenses } from "@/app/utils/expenseStorageOptimized";
 import { Button } from "@/components/ui/primary-button";
 import { SecondaryButton } from "@/components/ui/secondary-button";
 import { useEffect, useState } from "react";
@@ -26,6 +28,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import Slider from "@react-native-community/slider";
 
 const INVESTMENT_OPTIONS: InvestmentOption[] = [
   { name: "Fixed Deposit", expectedReturn: 6.5, risk: "Low" },
@@ -49,7 +52,8 @@ export default function GoalsScreen() {
   const [targetAmount, setTargetAmount] = useState("");
   const [timeHorizon, setTimeHorizon] = useState("");
   const [initialCorpus, setInitialCorpus] = useState("");
-  const [expectedReturn, setExpectedReturn] = useState("12");
+  const [riskProfile, setRiskProfile] = useState<"Low" | "Medium" | "High">("Medium");
+  const [showRiskDropdown, setShowRiskDropdown] = useState(false);
 
   // Form states for yearly updates
   const [portfolioValue, setPortfolioValue] = useState("");
@@ -57,11 +61,35 @@ export default function GoalsScreen() {
   const [actualReturn, setActualReturn] = useState("");
   const [updateNotes, setUpdateNotes] = useState("");
 
+  // Form states for top-up
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState("");
+
+  // State for goal deletion
+  const [selectedForDelete, setSelectedForDelete] = useState<string | null>(null);
+
+  // Goal Coach data
+  const [monthlyExpenses, setMonthlyExpenses] = useState<Record<string, number>>({});
+  const [budgets, setBudgets] = useState<Record<string, number>>({});
+  const [sliderCutAmount, setSliderCutAmount] = useState(0);
+
   // Load goals on mount
   useEffect(() => {
     loadGoals()
       .then(setGoals)
       .catch((error) => console.error("Failed to load goals:", error));
+
+    // Load expenses and budgets for Goal Coach
+    Promise.all([getCurrentMonthExpenses(), loadBudgets()])
+      .then(([expenseData, budgetData]) => {
+        if (expenseData?.categoryBreakdown) {
+          setMonthlyExpenses(expenseData.categoryBreakdown);
+        }
+        if (budgetData) {
+          setBudgets(budgetData);
+        }
+      })
+      .catch((error) => console.error("Failed to load expense/budget data:", error));
   }, []);
 
   // Save goals whenever they change
@@ -77,6 +105,18 @@ export default function GoalsScreen() {
     return "₹" + amount.toLocaleString("en-IN");
   };
 
+  const getInvestmentOptionsByRisk = (risk: "Low" | "Medium" | "High") => {
+    return INVESTMENT_OPTIONS.filter((opt) => opt.risk === risk);
+  };
+
+  const getExpectedReturnForRisk = (risk: "Low" | "Medium" | "High") => {
+    const options = getInvestmentOptionsByRisk(risk);
+    if (options.length === 0) return 10;
+    // Return average expected return of options in this risk category
+    const avgReturn = options.reduce((sum, opt) => sum + opt.expectedReturn, 0) / options.length;
+    return Math.round(avgReturn * 10) / 10;
+  };
+
   const createGoal = () => {
     if (!goalName || !targetAmount || !timeHorizon) {
       Alert.alert("Error", "Please fill all required fields");
@@ -86,15 +126,18 @@ export default function GoalsScreen() {
     const target = parseFloat(targetAmount);
     const horizon = parseInt(timeHorizon);
     const corpus = parseFloat(initialCorpus) || 0;
-    const expectedReturnRate = parseFloat(expectedReturn) || 12;
+    const expectedReturnRate = getExpectedReturnForRisk(riskProfile);
 
     if (target <= 0 || horizon <= 0) {
       Alert.alert("Error", "Please enter valid amounts and time horizon");
       return;
     }
 
+    // Get investment options for selected risk profile
+    const riskProfileOptions = getInvestmentOptionsByRisk(riskProfile);
+    
     // Calculate SIP for each investment option using the new formula
-    const optionsWithSIP = INVESTMENT_OPTIONS.map((option) => ({
+    const optionsWithSIP = riskProfileOptions.map((option) => ({
       ...option,
       monthlySIP: calculateRequiredSIP({
         targetAmount: target,
@@ -212,7 +255,8 @@ export default function GoalsScreen() {
     setTargetAmount("");
     setTimeHorizon("");
     setInitialCorpus("");
-    setExpectedReturn("12");
+    setRiskProfile("Medium");
+    setShowRiskDropdown(false);
   };
 
   const resetUpdateForm = () => {
@@ -220,6 +264,86 @@ export default function GoalsScreen() {
     setExtraAdded("");
     setActualReturn("");
     setUpdateNotes("");
+  };
+
+  const addTopUp = () => {
+    if (!selectedGoal || !topUpAmount) {
+      Alert.alert("Error", "Please enter a top-up amount");
+      return;
+    }
+
+    const topUp = parseFloat(topUpAmount);
+
+    if (topUp <= 0) {
+      Alert.alert("Error", "Top-up amount must be greater than 0");
+      return;
+    }
+
+    const updatedGoal = {
+      ...selectedGoal,
+      currentCorpus: selectedGoal.currentCorpus + topUp,
+    };
+
+    setGoals((prev) =>
+      prev.map((g) => (g.id === selectedGoal.id ? updatedGoal : g)),
+    );
+    setSelectedGoal(updatedGoal);
+    setTopUpAmount("");
+    setShowTopUpModal(false);
+
+    Alert.alert(
+      "Success",
+      `Top-up of ${formatINR(topUp)} added. New corpus: ${formatINR(updatedGoal.currentCorpus)}`,
+    );
+  };
+
+  const deleteGoal = (goalId: string) => {
+    Alert.alert(
+      "Delete Goal",
+      "Are you sure you want to delete this goal? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          onPress: () => setSelectedForDelete(null),
+        },
+        {
+          text: "Delete",
+          onPress: () => {
+            setGoals((prev) => prev.filter((g) => g.id !== goalId));
+            setSelectedForDelete(null);
+            Alert.alert("Success", "Goal deleted successfully");
+          },
+          style: "destructive",
+        },
+      ],
+    );
+  };
+
+  // Goal Coach Helper Functions
+  const calculateGoalHealthScore = (): number => {
+    if (goals.length === 0) return 100;
+
+    // Total monthly SIP required across all goals
+    const totalRequiredSIP = goals.reduce((sum, goal) => sum + goal.monthlySIP, 0);
+
+    // Total actual monthly savings = (Income - Total Expenses)
+    // For simplicity, we estimate from expenses (user should set income elsewhere)
+    const totalExpenses = Object.values(monthlyExpenses).reduce((sum, exp) => sum + exp, 0);
+    
+    // Assume income of ~3x average expenses for estimation (can be improved with user income data)
+    const estimatedIncome = totalExpenses > 0 ? totalExpenses * 3 : 50000;
+    const actualSavings = Math.max(0, estimatedIncome - totalExpenses);
+
+    // Health score: what % of required SIP is covered by actual savings
+    const healthScore = totalRequiredSIP > 0 ? (actualSavings / totalRequiredSIP) * 100 : 100;
+    return Math.min(100, Math.round(healthScore));
+  };
+
+  const calculateWhatIfSavings = (cutAmount: number): number => {
+    if (goals.length === 0) return 0;
+    const totalMonthlyGoalSIP = goals.reduce((sum, g) => sum + g.monthlySIP, 0);
+    const monthsEarlier = totalMonthlyGoalSIP > 0 ? (cutAmount / totalMonthlyGoalSIP) * 12 : 0;
+    return Math.round(monthsEarlier * 10) / 10;
   };
 
   const getRiskColor = (risk: string) => {
@@ -267,14 +391,32 @@ export default function GoalsScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.goalCard}
+        style={[
+          styles.goalCard,
+          selectedForDelete === item.id && styles.goalCardSelected,
+        ]}
         onPress={() => {
-          setSelectedGoal(item);
-          setShowUpdateModal(true);
+          if (selectedForDelete === item.id) {
+            setSelectedForDelete(null);
+          } else {
+            setSelectedGoal(item);
+            setShowUpdateModal(true);
+          }
         }}
+        onLongPress={() => {
+          setSelectedForDelete(item.id);
+        }}
+        delayLongPress={500}
       >
         <View style={styles.goalHeader}>
-          <Text style={styles.goalName}>{item.name}</Text>
+          <View style={styles.goalHeaderLeft}>
+            {selectedForDelete === item.id && (
+              <View style={styles.deleteCheckbox}>
+                <Text style={styles.deleteCheckmark}>✓</Text>
+              </View>
+            )}
+            <Text style={styles.goalName}>{item.name}</Text>
+          </View>
           <View style={{ alignItems: "flex-end", gap: 4 }}>
             <Text style={styles.goalTarget}>
               {formatINR(item.targetAmount)}
@@ -342,6 +484,27 @@ export default function GoalsScreen() {
             {formatINR(item.currentCorpus)} / {formatINR(item.targetAmount)}
           </Text>
         </View>
+
+        <View style={styles.goalCardActions}>
+          {selectedForDelete === item.id ? (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => deleteGoal(item.id)}
+            >
+              <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.topUpButton}
+              onPress={() => {
+                setSelectedGoal(item);
+                setShowTopUpModal(true);
+              }}
+            >
+              <Text style={styles.topUpButtonText}>+ Top Up</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -363,6 +526,63 @@ export default function GoalsScreen() {
         renderItem={renderGoalCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.goalsList}
+        ListFooterComponent={
+          goals.length > 0 && (
+            <View style={styles.goalCoachSection}>
+              {/* 1. Goal Health Score */}
+              <View style={styles.healthScoreCard}>
+                <Text style={styles.coachTitle}>🎯 Goal Health Score</Text>
+                <View style={styles.scoreContainer}>
+                  <Text style={styles.scoreValue}>{calculateGoalHealthScore()}%</Text>
+                  <Text style={styles.scoreLabel}>of monthly SIP covered</Text>
+                </View>
+                <View style={styles.scoreBar}>
+                  <View
+                    style={[
+                      styles.scoreBarFill,
+                      {
+                        width: `${Math.min(calculateGoalHealthScore(), 100)}%`,
+                        backgroundColor:
+                          calculateGoalHealthScore() >= 80
+                            ? "#10605A"
+                            : calculateGoalHealthScore() >= 50
+                              ? "#5CCAD4"
+                              : "#FF6B6B",
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              {/* 2. What-If Simulator */}
+              <View style={styles.simulatorCard}>
+                <Text style={styles.coachTitle}>📊 What-If Savings Booster</Text>
+                <View style={styles.sliderContainer}>
+                  <Text style={styles.sliderLabel}>Cut spending by:</Text>
+                  <Text style={styles.sliderAmount}>{formatINR(sliderCutAmount)}</Text>
+                  <Slider
+                    style={styles.slider}
+                    minimumValue={0}
+                    maximumValue={Math.max(
+                      5000,
+                      Object.values(monthlyExpenses).reduce((a, b) => a + b, 0) * 0.2
+                    )}
+                    onValueChange={setSliderCutAmount}
+                    step={100}
+                  />
+                </View>
+                <View style={styles.simulatorResult}>
+                  <Text style={styles.resultLabel}>Reach your goal:</Text>
+                  <Text style={styles.resultValue}>
+                    {calculateWhatIfSavings(sliderCutAmount)} months earlier
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.coachDivider} />
+            </View>
+          )
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No goals yet</Text>
@@ -433,18 +653,80 @@ export default function GoalsScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Expected Annual Return (%)
-                </Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={expectedReturn}
-                  onChangeText={setExpectedReturn}
-                  placeholder="12"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#BBBBBB"
-                />
+                <Text style={styles.inputLabel}>Risk Profile *</Text>
+                <TouchableOpacity
+                  style={[styles.textInput, styles.riskProfileButton]}
+                  onPress={() => setShowRiskDropdown(!showRiskDropdown)}
+                >
+                  <Text style={styles.riskProfileText}>{riskProfile}</Text>
+                  <Text style={styles.dropdownArrow}>{showRiskDropdown ? "▲" : "▼"}</Text>
+                </TouchableOpacity>
+                {showRiskDropdown && (
+                  <View style={styles.riskDropdown}>
+                    {["Low", "Medium", "High"].map((risk) => (
+                      <TouchableOpacity
+                        key={risk}
+                        style={[
+                          styles.riskOption,
+                          riskProfile === risk && styles.riskOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setRiskProfile(risk as "Low" | "Medium" | "High");
+                          setShowRiskDropdown(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.riskOptionText,
+                            riskProfile === risk && styles.riskOptionTextSelected,
+                          ]}
+                        >
+                          {risk}
+                        </Text>
+                        <Text style={styles.riskOptionReturn}>
+                          (~{getExpectedReturnForRisk(risk as "Low" | "Medium" | "High")}%)
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
+
+              {/* Investment Options Preview */}
+              {riskProfile && (
+                <View style={styles.investmentOptions}>
+                  <Text style={styles.optionsTitle}>
+                    Available Investments ({riskProfile} Risk)
+                  </Text>
+                  {getInvestmentOptionsByRisk(riskProfile).map((option, index) => (
+                    <View key={index} style={styles.optionCard}>
+                      <View style={styles.optionHeader}>
+                        <Text style={styles.optionName}>{option.name}</Text>
+                        <View
+                          style={[
+                            styles.riskBadge,
+                            {
+                              backgroundColor: getRiskColor(option.risk) + "20",
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.riskText,
+                              { color: getRiskColor(option.risk) },
+                            ]}
+                          >
+                            {option.risk} Risk
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.optionReturn}>
+                        Expected Return: {option.expectedReturn}% p.a.
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </ScrollView>
 
             <View style={styles.modalButtons}>
@@ -625,6 +907,68 @@ export default function GoalsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Top Up Modal */}
+      <Modal
+        visible={showTopUpModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowTopUpModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Top Up Investment - {selectedGoal?.name}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              Current Corpus: {selectedGoal && formatINR(selectedGoal.currentCorpus)}
+            </Text>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Top-Up Amount (₹) *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={topUpAmount}
+                  onChangeText={setTopUpAmount}
+                  placeholder="50000"
+                  keyboardType="numeric"
+                  placeholderTextColor="#666"
+                  autoFocus
+                />
+              </View>
+
+              <View style={styles.topUpPreview}>
+                <Text style={styles.previewLabel}>New Corpus:</Text>
+                <Text style={styles.previewAmount}>
+                  {selectedGoal && topUpAmount
+                    ? formatINR(
+                        selectedGoal.currentCorpus + parseFloat(topUpAmount)
+                      )
+                    : selectedGoal && formatINR(selectedGoal.currentCorpus)}
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <Button
+                text="Cancel"
+                onPress={() => {
+                  setTopUpAmount("");
+                  setShowTopUpModal(false);
+                }}
+                variant="outline"
+                style={styles.modalButton}
+              />
+              <Button
+                text="Add Top Up"
+                onPress={addTopUp}
+                style={styles.modalButton}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -658,11 +1002,62 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
+  goalCardSelected: {
+    backgroundColor: "#FF6B6B15",
+    borderColor: "#FF6B6B",
+    borderWidth: 2,
+  },
+  goalCardActions: {
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "flex-start",
+  },
+  topUpButton: {
+    backgroundColor: "#10605A",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  topUpButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  deleteButton: {
+    backgroundColor: "#FF6B6B",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  deleteButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
+  },
   goalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+  },
+  goalHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  deleteCheckbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FF6B6B",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteCheckmark: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   goalName: {
     fontSize: 18,
@@ -903,5 +1298,196 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     marginHorizontal: 4,
+  },
+  riskProfileButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  riskProfileText: {
+    fontSize: 16,
+    color: "#1A1A1A",
+    fontWeight: "500",
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    color: "#888888",
+  },
+  riskDropdown: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderRadius: 8,
+    marginTop: -8,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  riskOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
+  },
+  riskOptionSelected: {
+    backgroundColor: "#10605A20",
+  },
+  riskOptionText: {
+    fontSize: 14,
+    color: "#666666",
+  },
+  riskOptionTextSelected: {
+    color: "#10605A",
+    fontWeight: "600",
+  },
+  riskOptionReturn: {
+    fontSize: 12,
+    color: "#888888",
+  },
+  topUpPreview: {
+    backgroundColor: "#10605A15",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#10605A40",
+  },
+  previewLabel: {
+    fontSize: 14,
+    color: "#666666",
+    marginBottom: 6,
+  },
+  previewAmount: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#10605A",
+  },
+  goalCoachSection: {
+    marginBottom: 24,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
+  },
+  healthScoreCard: {
+    backgroundColor: "#10605A08",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#10605A30",
+  },
+  coachTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 12,
+  },
+  scoreContainer: {
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  scoreValue: {
+    fontSize: 42,
+    fontWeight: "800",
+    color: "#10605A",
+  },
+  scoreLabel: {
+    fontSize: 12,
+    color: "#666666",
+    marginTop: 4,
+  },
+  scoreBar: {
+    height: 8,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  scoreBarFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  impactSection: {
+    marginBottom: 16,
+  },
+  impactCard: {
+    backgroundColor: "#FF6B6B10",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: "#FF6B6B",
+  },
+  impactRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  impactCategory: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1A1A1A",
+  },
+  impactAmount: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FF6B6B",
+  },
+  impactSubtext: {
+    fontSize: 12,
+    color: "#666666",
+    fontStyle: "italic",
+  },
+  simulatorCard: {
+    backgroundColor: "#5CCAD410",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#5CCAD430",
+  },
+  sliderContainer: {
+    marginBottom: 16,
+  },
+  sliderLabel: {
+    fontSize: 12,
+    color: "#666666",
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  sliderAmount: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#10605A",
+    marginBottom: 12,
+  },
+  slider: {
+    width: "100%",
+    height: 40,
+  },
+  simulatorResult: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 12,
+    alignItems: "center",
+  },
+  resultLabel: {
+    fontSize: 12,
+    color: "#666666",
+    marginBottom: 4,
+  },
+  resultValue: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#10605A",
+  },
+  coachDivider: {
+    height: 1,
+    backgroundColor: "#E0E0E0",
+    marginTop: 8,
   },
 });

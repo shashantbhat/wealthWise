@@ -43,26 +43,150 @@ export const TabTheme = {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: "system-ui",
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: "ui-serif",
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: "ui-rounded",
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: "ui-monospace",
+    sans: "Inter",
+    serif: "Inter",
+    rounded: "Inter",
+    mono: "Inter",
+    thin: "Inter-Thin",
+    extraLight: "Inter-ExtraLight",
+    light: "Inter-Light",
+    regular: "Inter-Regular",
+    medium: "Inter-Medium",
+    semibold: "Inter-SemiBold",
+    bold: "Inter-Bold",
+    extrabold: "Inter-ExtraBold",
+    black: "Inter-Black",
   },
-  default: {
-    sans: "normal",
-    serif: "serif",
-    rounded: "normal",
-    mono: "monospace",
+  android: {
+    sans: "Inter",
+    serif: "Inter",
+    rounded: "Inter",
+    mono: "Inter",
+    thin: "Inter-Thin",
+    extraLight: "Inter-ExtraLight",
+    light: "Inter-Light",
+    regular: "Inter-Regular",
+    medium: "Inter-Medium",
+    semibold: "Inter-SemiBold",
+    bold: "Inter-Bold",
+    extrabold: "Inter-ExtraBold",
+    black: "Inter-Black",
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded:
-      "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    sans: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    serif: "Inter, Georgia, 'Times New Roman', serif",
+    rounded: "Inter, 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
+    mono: "Inter, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    thin: "Inter",
+    extraLight: "Inter",
+    light: "Inter",
+    regular: "Inter",
+    medium: "Inter",
+    semibold: "Inter",
+    bold: "Inter",
+    extrabold: "Inter",
+    black: "Inter",
   },
 });
+
+// Unified Typography System - All text uses Inter with consistent sizing and weight
+export const Typography = {
+  // Display: Extra large headings for main titles
+  display: {
+    fontFamily: "Inter",
+    fontSize: 40,
+    fontWeight: "700" as const,
+    lineHeight: 48,
+  },
+  // H1: Main page headings
+  h1: {
+    fontFamily: "Inter",
+    fontSize: 32,
+    fontWeight: "700" as const,
+    lineHeight: 40,
+  },
+  // H2: Section headings
+  h2: {
+    fontFamily: "Inter",
+    fontSize: 28,
+    fontWeight: "700" as const,
+    lineHeight: 36,
+  },
+  // H3: Subsection headings
+  h3: {
+    fontFamily: "Inter",
+    fontSize: 24,
+    fontWeight: "700" as const,
+    lineHeight: 32,
+  },
+  // H4: Small headings
+  h4: {
+    fontFamily: "Inter",
+    fontSize: 20,
+    fontWeight: "700" as const,
+    lineHeight: 28,
+  },
+  // H5: Minor headings
+  h5: {
+    fontFamily: "Inter",
+    fontSize: 18,
+    fontWeight: "700" as const,
+    lineHeight: 26,
+  },
+  // H6: Tiny headings
+  h6: {
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "700" as const,
+    lineHeight: 24,
+  },
+  // Body: Default text
+  body: {
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "500" as const,
+    lineHeight: 24,
+  },
+  // Body Medium: Slightly smaller body text
+  bodyMedium: {
+    fontFamily: "Inter",
+    fontSize: 15,
+    fontWeight: "500" as const,
+    lineHeight: 23,
+  },
+  // Body Small: Small body text
+  bodySmall: {
+    fontFamily: "Inter",
+    fontSize: 14,
+    fontWeight: "500" as const,
+    lineHeight: 21,
+  },
+  // Label: Label text
+  label: {
+    fontFamily: "Inter",
+    fontSize: 13,
+    fontWeight: "700" as const,
+    lineHeight: 20,
+  },
+  // Label Small: Tiny label text
+  labelSmall: {
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "700" as const,
+    lineHeight: 18,
+  },
+  // Caption: Very small text
+  caption: {
+    fontFamily: "Inter",
+    fontSize: 11,
+    fontWeight: "600" as const,
+    lineHeight: 16,
+  },
+  // Hint: Extra small text
+  hint: {
+    fontFamily: "Inter",
+    fontSize: 10,
+    fontWeight: "500" as const,
+    lineHeight: 14,
+  },
+};

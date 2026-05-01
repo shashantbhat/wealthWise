@@ -1,3 +1,4 @@
+import { Typography } from "@/constants/theme";
 import investmentsData from "@/data/investments.json";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
@@ -5,7 +6,6 @@ import {
     Dimensions,
     Keyboard,
     Modal,
-    Platform,
     SafeAreaView,
     ScrollView,
     StatusBar,
@@ -13,14 +13,26 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 
-const INVESTMENTS_FONT = Platform.select({
-  ios: "SF Pro Text",
-  android: "sans-serif",
-  default: "System",
-});
+const INVESTMENTS_FONT = "Inter";
+
+const INVEST_THEME = {
+  bg: "#FFFFFF",
+  surface: "#FFFFFF",
+  surfaceSoft: "#F7F8FA",
+  surfaceMuted: "#FBFBFC",
+  border: "#E6E8EE",
+  borderStrong: "#D6DAE2",
+  text: "#111111",
+  textMuted: "#666666",
+  textSoft: "#8A8A8A",
+  accent: "#111111",
+  accentSoft: "rgba(17, 17, 17, 0.08)",
+  success: "#0B8F6A",
+  shadow: "#000000",
+};
 
 function InvestText({ style, ...props }: React.ComponentProps<typeof Text>) {
   return <Text {...props} style={[{ fontFamily: INVESTMENTS_FONT }, style]} />;
@@ -33,7 +45,7 @@ const CALC_FUNDS = [
     name: "Index Funds",
     icon: "trending-up-outline",
     avgRate: 13,
-    color: "#4DABF7",
+    color: "#111111",
     risk: "Moderate",
   },
   {
@@ -41,7 +53,7 @@ const CALC_FUNDS = [
     name: "Flexi Cap Funds",
     icon: "swap-horizontal-outline",
     avgRate: 13,
-    color: "#A78BFA",
+    color: "#555555",
     risk: "Moderate-High",
   },
   {
@@ -49,7 +61,7 @@ const CALC_FUNDS = [
     name: "Debt Funds",
     icon: "shield-checkmark-outline",
     avgRate: 7.5,
-    color: "#52B788",
+    color: "#777777",
     risk: "Low",
   },
   {
@@ -57,7 +69,7 @@ const CALC_FUNDS = [
     name: "T-Bills",
     icon: "document-outline",
     avgRate: 6.2,
-    color: "#FF9500",
+    color: "#A0A0A0",
     risk: "Very Low",
   },
   {
@@ -65,7 +77,7 @@ const CALC_FUNDS = [
     name: "Small Cap MF",
     icon: "rocket-outline",
     avgRate: 17,
-    color: "#FF6B6B",
+    color: "#333333",
     risk: "High",
   },
   {
@@ -73,7 +85,7 @@ const CALC_FUNDS = [
     name: "Mid Cap Funds",
     icon: "bar-chart-outline",
     avgRate: 15,
-    color: "#FD7E14",
+    color: "#666666",
     risk: "Moderate-High",
   },
   {
@@ -81,7 +93,7 @@ const CALC_FUNDS = [
     name: "Large Cap MF",
     icon: "business-outline",
     avgRate: 12,
-    color: "#20C997",
+    color: "#888888",
     risk: "Low-Moderate",
   },
   {
@@ -89,7 +101,7 @@ const CALC_FUNDS = [
     name: "Gov Bonds",
     icon: "shield-checkmark-outline",
     avgRate: 6.8,
-    color: "#6C63FF",
+    color: "#A8A8A8",
     risk: "Very Low",
   },
 ];
@@ -108,6 +120,25 @@ function fmtAmt(v: number) {
   if (v >= 1e7) return `₹${(v / 1e7).toFixed(2)} Cr`;
   if (v >= 1e5) return `₹${(v / 1e5).toFixed(2)} L`;
   return `₹${Math.round(v).toLocaleString("en-IN")}`;
+}
+
+function formatCompactINR(amount: number) {
+  const absolute = Math.abs(amount);
+  const sign = amount < 0 ? "-" : "";
+
+  if (absolute >= 1e7) {
+    return `${sign}₹${(absolute / 1e7).toFixed(1)}Cr`;
+  }
+
+  if (absolute >= 1e5) {
+    return `${sign}₹${(absolute / 1e5).toFixed(1)}L`;
+  }
+
+  if (absolute >= 1e3) {
+    return `${sign}₹${(absolute / 1e3).toFixed(1)}K`;
+  }
+
+  return `${sign}₹${Math.round(absolute).toLocaleString("en-IN")}`;
 }
 
 function SIPCalculator() {
@@ -165,7 +196,7 @@ function SIPCalculator() {
           style={calcS.input}
           keyboardType="numeric"
           placeholder={mode === "sip" ? "5,000" : "1,00,000"}
-          placeholderTextColor="#BBB"
+          placeholderTextColor={INVEST_THEME.textSoft}
           value={amount}
           onChangeText={setAmount}
           returnKeyType="done"
@@ -200,7 +231,7 @@ function SIPCalculator() {
         <Ionicons
           name={open ? "chevron-up" : "chevron-down"}
           size={15}
-          color="#AAA"
+          color={INVEST_THEME.textSoft}
         />
       </TouchableOpacity>
 
@@ -244,7 +275,7 @@ function SIPCalculator() {
           style={[calcS.input, { flex: 1 }]}
           keyboardType="numeric"
           placeholder="10"
-          placeholderTextColor="#BBB"
+          placeholderTextColor={INVEST_THEME.textSoft}
           value={years}
           onChangeText={setYears}
           returnKeyType="done"
@@ -266,8 +297,8 @@ function SIPCalculator() {
         >
           <InvestText style={calcS.resultSub}>
             {mode === "sip"
-              ? `₹${amt.toLocaleString("en-IN")}/mo`
-              : `₹${amt.toLocaleString("en-IN")} lumpsum`}{" "}
+              ? `${formatCompactINR(amt)}/mo`
+              : `${formatCompactINR(amt)} lumpsum`}{" "}
             in {fund.name} for {yrs}y
           </InvestText>
           <InvestText style={[calcS.resultAmt, { color: fund.color }]}>
@@ -281,14 +312,18 @@ function SIPCalculator() {
             <View style={calcS.vline} />
             <View style={calcS.cell}>
               <InvestText style={calcS.cellL}>Est. Gains</InvestText>
-              <InvestText style={[calcS.cellV, { color: "#00C853" }]}>
+              <InvestText
+                style={[calcS.cellV, { color: INVEST_THEME.success }]}
+              >
                 {fmtAmt(gains)}
               </InvestText>
             </View>
             <View style={calcS.vline} />
             <View style={calcS.cell}>
               <InvestText style={calcS.cellL}>Returns</InvestText>
-              <InvestText style={[calcS.cellV, { color: "#00C853" }]}>
+              <InvestText
+                style={[calcS.cellV, { color: INVEST_THEME.success }]}
+              >
                 {invested > 0
                   ? `${((gains / invested) * 100).toFixed(0)}%`
                   : "--"}
@@ -309,15 +344,15 @@ function SIPCalculator() {
 
 const calcS = StyleSheet.create({
   card: {
-    backgroundColor: "#FFF",
+    backgroundColor: INVEST_THEME.surface,
     borderRadius: 20,
     padding: 18,
     marginBottom: 20,
-    shadowColor: "#10605A",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowColor: INVEST_THEME.shadow,
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   titleRow: {
     flexDirection: "row",
@@ -325,10 +360,10 @@ const calcS = StyleSheet.create({
     gap: 8,
     marginBottom: 14,
   },
-  title: { fontSize: 16, fontWeight: "800", color: "#1A1A1A" },
+  title: { ...Typography.h6, fontWeight: "900", color: INVEST_THEME.text },
   toggle: {
     flexDirection: "row",
-    backgroundColor: "#F4F4F4",
+    backgroundColor: INVEST_THEME.surfaceSoft,
     borderRadius: 10,
     padding: 3,
     marginBottom: 14,
@@ -348,10 +383,10 @@ const calcS = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F7F7F7",
+    backgroundColor: INVEST_THEME.surfaceMuted,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: INVEST_THEME.border,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
@@ -359,15 +394,14 @@ const calcS = StyleSheet.create({
   suffix: { fontSize: 14, color: "#AAA", marginLeft: 6 },
   input: {
     flex: 1,
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#1A1A1A",
+    ...Typography.h5,
+    color: INVEST_THEME.text,
     padding: 0,
   },
   selector: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F7F7F7",
+    backgroundColor: INVEST_THEME.surfaceMuted,
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 12,
@@ -381,14 +415,14 @@ const calcS = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sName: { fontSize: 14, fontWeight: "700" },
-  sRate: { fontSize: 11, color: "#AAA", marginTop: 1 },
+  sName: { ...Typography.h6 },
+  sRate: { ...Typography.caption, color: INVEST_THEME.textSoft, marginTop: 1 },
   dropdown: {
     marginTop: 4,
-    backgroundColor: "#FFF",
+    backgroundColor: INVEST_THEME.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#EEE",
+    borderColor: INVEST_THEME.border,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOpacity: 0.06,
@@ -403,7 +437,7 @@ const calcS = StyleSheet.create({
     paddingVertical: 10,
     gap: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: INVEST_THEME.border,
   },
   ddIcon: {
     width: 26,
@@ -412,26 +446,43 @@ const calcS = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ddName: { flex: 1, fontSize: 13, color: "#1A1A1A", fontWeight: "600" },
-  ddRate: { fontSize: 12, fontWeight: "700" },
+  ddName: { flex: 1, ...Typography.label, color: INVEST_THEME.text },
+  ddRate: { ...Typography.labelSmall },
   result: { borderRadius: 14, borderWidth: 1, padding: 14, marginTop: 14 },
-  resultSub: { fontSize: 11, color: "#AAA", marginBottom: 2 },
-  resultAmt: { fontSize: 32, fontWeight: "800", marginBottom: 12 },
+  resultSub: {
+    ...Typography.caption,
+    color: INVEST_THEME.textSoft,
+    marginBottom: 2,
+  },
+  resultAmt: {
+    fontSize: 30,
+    fontWeight: "900",
+    marginBottom: 12,
+    letterSpacing: -0.4,
+  },
   grid: { flexDirection: "row" },
   cell: { flex: 1, alignItems: "center" },
-  cellL: { fontSize: 10, color: "#AAA", marginBottom: 3 },
-  cellV: { fontSize: 13, fontWeight: "700", color: "#1A1A1A" },
-  vline: { width: 1, backgroundColor: "#EEE", marginHorizontal: 6 },
+  cellL: { ...Typography.hint, color: INVEST_THEME.textSoft, marginBottom: 3 },
+  cellV: { ...Typography.label, color: INVEST_THEME.text },
+  vline: {
+    width: 1,
+    backgroundColor: INVEST_THEME.border,
+    marginHorizontal: 6,
+  },
   empty: {
     padding: 16,
     alignItems: "center",
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#DDD",
+    borderColor: INVEST_THEME.border,
     marginTop: 14,
   },
-  emptyTxt: { fontSize: 13, color: "#BBB", textAlign: "center" },
+  emptyTxt: {
+    ...Typography.label,
+    color: INVEST_THEME.textSoft,
+    textAlign: "center",
+  },
 });
 
 const { width: SW } = Dimensions.get("window");
@@ -484,22 +535,30 @@ function VolatilityHint({ riskScore }: { riskScore: number }) {
 }
 const volStyles = StyleSheet.create({
   container: {
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: INVEST_THEME.surfaceMuted,
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
-    borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderWidth: 1,
+    borderColor: INVEST_THEME.border,
   },
-  label: { fontSize: 12, fontWeight: "700", color: "#999", marginBottom: 8 },
+  label: {
+    ...Typography.labelSmall,
+    color: INVEST_THEME.textSoft,
+    marginBottom: 8,
+  },
   lineRow: { justifyContent: "center", marginBottom: 6 },
-  wave: { fontSize: 18, color: "#FF6B6B", letterSpacing: 2 },
+  wave: { ...Typography.h5, color: INVEST_THEME.text, letterSpacing: 2 },
   smoothLine: {
     height: 3,
-    backgroundColor: "#00C853",
+    backgroundColor: INVEST_THEME.text,
     borderRadius: 2,
   },
-  hint: { fontSize: 12, color: "#777", fontStyle: "italic" },
+  hint: {
+    ...Typography.labelSmall,
+    color: INVEST_THEME.textMuted,
+    fontStyle: "italic",
+  },
 });
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
@@ -542,7 +601,7 @@ function InvestmentDetail({
               <InvestText style={dStyles.tagline}>{item.tagline}</InvestText>
             </View>
             <TouchableOpacity onPress={onClose} style={dStyles.closeBtn}>
-              <Ionicons name="close" size={22} color="#666" />
+              <Ionicons name="close" size={22} color={INVEST_THEME.text} />
             </TouchableOpacity>
           </View>
 
@@ -621,7 +680,9 @@ function InvestmentDetail({
               <View style={dStyles.rule72Card}>
                 <InvestText style={dStyles.rule72Text}>
                   At this return rate, your money{" "}
-                  <InvestText style={{ fontWeight: "700", color: "#1A1A1A" }}>
+                  <InvestText
+                    style={{ fontWeight: "700", color: INVEST_THEME.text }}
+                  >
                     doubles
                   </InvestText>{" "}
                   in approximately
@@ -709,7 +770,11 @@ function InvestmentDetail({
                   marginBottom: 8,
                 }}
               >
-                <Ionicons name="receipt-outline" size={16} color="#10605A" />
+                <Ionicons
+                  name="receipt-outline"
+                  size={16}
+                  color={INVEST_THEME.text}
+                />
                 <InvestText style={dStyles.taxTitle}>Tax Wise Note</InvestText>
               </View>
               <InvestText style={dStyles.taxText}>{item.tax_note}</InvestText>
@@ -726,11 +791,11 @@ function InvestmentDetail({
 const dStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.22)",
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#F8F8F8",
+    backgroundColor: INVEST_THEME.bg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: "90%",
@@ -750,37 +815,46 @@ const dStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  title: { fontSize: 18, fontWeight: "800", color: "#1A1A1A" },
-  tagline: { fontSize: 12, color: "#777", marginTop: 2 },
+  title: { ...Typography.h5, fontWeight: "900", color: INVEST_THEME.text },
+  tagline: {
+    ...Typography.labelSmall,
+    color: INVEST_THEME.textSoft,
+    marginTop: 2,
+  },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: INVEST_THEME.surfaceSoft,
     justifyContent: "center",
     alignItems: "center",
   },
   statsRow: { flexDirection: "row", gap: 12, padding: 16, paddingBottom: 4 },
   statBox: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: INVEST_THEME.surfaceMuted,
     borderRadius: 14,
     padding: 14,
     alignItems: "center",
     borderWidth: 1,
+    borderColor: INVEST_THEME.border,
   },
-  statValue: { fontSize: 16, fontWeight: "800" },
-  statLabel: { fontSize: 11, color: "#888", marginTop: 4, fontWeight: "500" },
+  statValue: { ...Typography.h6, fontWeight: "900" },
+  statLabel: {
+    ...Typography.caption,
+    color: INVEST_THEME.textSoft,
+    marginTop: 4,
+  },
   section: { paddingHorizontal: 16, paddingVertical: 10 },
   sectionTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#999",
+    color: INVEST_THEME.textSoft,
     textTransform: "uppercase",
     letterSpacing: 0.6,
     marginBottom: 8,
   },
-  riskLabel: { fontSize: 13, fontWeight: "700" },
+  riskLabel: { ...Typography.label },
   projectionCard: {
     marginHorizontal: 16,
     marginVertical: 8,
@@ -789,23 +863,53 @@ const dStyles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
-  projectionHeading: { fontSize: 12, color: "#888", marginBottom: 4 },
-  projectionAmount: { fontSize: 28, fontWeight: "900" },
-  projectionFor: { fontSize: 13, color: "#666", marginTop: 6 },
-  projectionResult: { fontSize: 34, fontWeight: "900", marginTop: 4 },
-  projectionNote: { fontSize: 11, color: "#999", marginTop: 6 },
+  projectionHeading: {
+    ...Typography.labelSmall,
+    color: INVEST_THEME.textSoft,
+    marginBottom: 4,
+  },
+  projectionAmount: { ...Typography.h2, fontWeight: "900" },
+  projectionFor: {
+    ...Typography.label,
+    color: INVEST_THEME.textMuted,
+    marginTop: 6,
+  },
+  projectionResult: {
+    fontSize: 34,
+    fontWeight: "900",
+    marginTop: 4,
+    fontFamily: "Inter",
+  },
+  projectionNote: {
+    ...Typography.caption,
+    color: INVEST_THEME.textSoft,
+    marginTop: 6,
+  },
   rule72Card: {
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: INVEST_THEME.surfaceMuted,
     borderRadius: 12,
     padding: 16,
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.08)",
+    borderWidth: 1,
+    borderColor: INVEST_THEME.border,
     alignItems: "center",
   },
-  rule72Text: { fontSize: 13, color: "#555", textAlign: "center" },
-  rule72Years: { fontSize: 36, fontWeight: "900", marginVertical: 4 },
-  rule72Formula: { fontSize: 12, color: "#999", fontStyle: "italic" },
-  bodyText: { fontSize: 14, color: "#444", lineHeight: 20 },
+  rule72Text: {
+    ...Typography.label,
+    color: INVEST_THEME.textMuted,
+    textAlign: "center",
+  },
+  rule72Years: {
+    fontSize: 36,
+    fontWeight: "900",
+    marginVertical: 4,
+    fontFamily: "Inter",
+  },
+  rule72Formula: {
+    ...Typography.labelSmall,
+    color: INVEST_THEME.textSoft,
+    fontStyle: "italic",
+  },
+  bodyText: { ...Typography.bodySmall, color: INVEST_THEME.textMuted },
   examplesRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -817,27 +921,27 @@ const dStyles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: INVEST_THEME.surfaceMuted,
   },
-  exampleChipText: { fontSize: 12, fontWeight: "600" },
+  exampleChipText: { ...Typography.labelSmall },
   taxCard: {
     marginHorizontal: 16,
     marginTop: 4,
     marginBottom: 8,
-    backgroundColor: "#FFF8F0",
+    backgroundColor: INVEST_THEME.surfaceMuted,
     borderRadius: 12,
     padding: 14,
     borderLeftWidth: 4,
-    borderLeftColor: "#10605A",
+    borderLeftColor: INVEST_THEME.text,
   },
-  taxTitle: { fontSize: 13, fontWeight: "700", color: "#10605A" },
-  taxText: { fontSize: 13, color: "#555", lineHeight: 18 },
+  taxTitle: { ...Typography.label, color: INVEST_THEME.text },
+  taxText: { ...Typography.label, color: INVEST_THEME.textMuted },
   featuresCard: {
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: INVEST_THEME.surfaceMuted,
     borderRadius: 12,
     padding: 14,
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.08)",
+    borderWidth: 1,
+    borderColor: INVEST_THEME.border,
     gap: 10,
   },
   featureRow: {
@@ -855,7 +959,7 @@ const dStyles = StyleSheet.create({
   featureText: {
     flex: 1,
     fontSize: 13,
-    color: "#444",
+    color: INVEST_THEME.textMuted,
     lineHeight: 19,
   },
 });
@@ -937,7 +1041,7 @@ function InvestmentCard({
       {/* <Ionicons
         name="chevron-forward"
         size={16}
-        color="#CCC"
+        color={INVEST_THEME.textSoft}
         style={{ alignSelf: "center" }}
       /> */}
     </TouchableOpacity>
@@ -948,13 +1052,19 @@ const cardStyles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "stretch",
-    backgroundColor: "rgba(255,255,255,0.55)",
+    backgroundColor: INVEST_THEME.surface,
     borderRadius: 18,
     borderWidth: 1,
+    borderColor: INVEST_THEME.border,
     marginBottom: 14,
     overflow: "hidden",
     paddingRight: 14,
     paddingVertical: 16,
+    shadowColor: INVEST_THEME.shadow,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 1,
   },
   accentBar: {
     // width: 4,
@@ -976,23 +1086,31 @@ const cardStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  title: { fontSize: 15, fontWeight: "800", color: "#1A1A1A" },
-  tagline: { fontSize: 11, color: "#888", marginTop: 2 },
+  title: {
+    ...Typography.bodyMedium,
+    fontWeight: "900",
+    color: INVEST_THEME.text,
+  },
+  tagline: {
+    ...Typography.caption,
+    color: INVEST_THEME.textSoft,
+    marginTop: 2,
+  },
   returnBadge: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
   },
-  returnText: { fontSize: 12, fontWeight: "800" },
+  returnText: { ...Typography.labelSmall, fontWeight: "900" },
   metaRow: { flexDirection: "row", gap: 0 },
   metaItem: { flex: 1 },
   metaLabel: {
     fontSize: 10,
-    color: "#AAA",
+    color: INVEST_THEME.textSoft,
     fontWeight: "600",
     marginBottom: 4,
   },
-  metaValue: { fontSize: 12, fontWeight: "600", color: "#444" },
+  metaValue: { ...Typography.labelSmall, color: INVEST_THEME.textMuted },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -1002,16 +1120,16 @@ export default function InvestmentsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor={INVEST_THEME.bg} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
         {/* Header */}
         <View style={styles.header}>
-          <InvestText style={styles.headerTitle}>Investments</InvestText>
+          <InvestText style={styles.headerTitle}>Invest</InvestText>
           <InvestText style={styles.headerSub}>
-            Your guide to growing wealth
+            Grow your wealth intelligently
           </InvestText>
         </View>
 
@@ -1021,9 +1139,9 @@ export default function InvestmentsScreen() {
         {/* Quick legend */}
         <View style={styles.legendRow}>
           {[
-            { label: "Low Risk", color: "#00C853" },
-            { label: "Moderate", color: "#4DABF7" },
-            { label: "High Risk", color: "#FF6B6B" },
+            { label: "Low Risk", color: INVEST_THEME.text },
+            { label: "Moderate", color: INVEST_THEME.textMuted },
+            { label: "High Risk", color: INVEST_THEME.textSoft },
           ].map(({ label, color }) => (
             <View key={label} style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: color }]} />
@@ -1043,7 +1161,7 @@ export default function InvestmentsScreen() {
 
         {/* Disclaimer */}
         <InvestText style={styles.disclaimer}>
-          ⚠️ Returns shown are historical estimates. Investments are subject to
+          Returns shown are historical estimates. Investments are subject to
           market risk. Please read all scheme documents carefully.
         </InvestText>
       </ScrollView>
@@ -1056,27 +1174,37 @@ export default function InvestmentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8F8F8" },
+  container: { flex: 1, backgroundColor: INVEST_THEME.bg },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
   header: { paddingTop: 20, paddingBottom: 8 },
-  headerTitle: { fontSize: 28, fontWeight: "900", color: "#1A1A1A" },
-  headerSub: { fontSize: 14, color: "#888", marginTop: 4 },
+  headerTitle: {
+    fontSize: 34,
+    fontWeight: "900",
+    color: INVEST_THEME.text,
+    letterSpacing: -0.4,
+    fontFamily: "Inter",
+  },
+  headerSub: {
+    ...Typography.bodySmall,
+    color: INVEST_THEME.textMuted,
+    marginTop: 4,
+  },
   legendRow: {
     flexDirection: "row",
     gap: 16,
     marginVertical: 16,
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: INVEST_THEME.surfaceMuted,
     borderRadius: 12,
     padding: 12,
-    borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.6)",
+    borderWidth: 1,
+    borderColor: INVEST_THEME.border,
   },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 12, color: "#555", fontWeight: "600" },
+  legendText: { ...Typography.labelSmall, color: INVEST_THEME.textMuted },
   disclaimer: {
     fontSize: 11,
-    color: "#AAA",
+    color: INVEST_THEME.textSoft,
     textAlign: "center",
     lineHeight: 16,
     marginTop: 8,
