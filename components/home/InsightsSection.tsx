@@ -45,7 +45,10 @@ export function InsightsSection({
   return (
     <>
       <TouchableOpacity onPress={onPress}>
-        <Text style={styles.sectionTitle}>Insights</Text>
+        <View className="flex-row w-full justify-between">
+          <Text style={styles.sectionTitle}>Insights</Text>
+          <Ionicons name="chevron-back" size={18} color="#1A1A1A" className="rotate-180 mb-3"/>
+        </View>
       </TouchableOpacity>
       {categoriesWithExpenses.length === 0 ? (
         <Text style={styles.emptyText}>No expenses to analyze</Text>

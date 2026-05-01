@@ -531,7 +531,7 @@ export default function GoalsScreen() {
             <View style={styles.goalCoachSection}>
               {/* 1. Goal Health Score */}
               <View style={styles.healthScoreCard}>
-                <Text style={styles.coachTitle}>🎯 Goal Health Score</Text>
+                <Text style={styles.coachTitle}>Goal Health Score</Text>
                 <View style={styles.scoreContainer}>
                   <Text style={styles.scoreValue}>{calculateGoalHealthScore()}%</Text>
                   <Text style={styles.scoreLabel}>of monthly SIP covered</Text>
@@ -556,13 +556,15 @@ export default function GoalsScreen() {
 
               {/* 2. What-If Simulator */}
               <View style={styles.simulatorCard}>
-                <Text style={styles.coachTitle}>📊 What-If Savings Booster</Text>
+                <Text style={styles.coachTitle}>What-If Savings Booster</Text>
                 <View style={styles.sliderContainer}>
                   <Text style={styles.sliderLabel}>Cut spending by:</Text>
                   <Text style={styles.sliderAmount}>{formatINR(sliderCutAmount)}</Text>
                   <Slider
                     style={styles.slider}
                     minimumValue={0}
+                    maximumTrackTintColor="#E0E0E0"
+                    minimumTrackTintColor="black"
                     maximumValue={Math.max(
                       5000,
                       Object.values(monthlyExpenses).reduce((a, b) => a + b, 0) * 0.2
@@ -578,8 +580,6 @@ export default function GoalsScreen() {
                   </Text>
                 </View>
               </View>
-
-              <View style={styles.coachDivider} />
             </View>
           )
         }
@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   topUpButton: {
-    backgroundColor: "#10605A",
+    backgroundColor: "black",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -1373,12 +1373,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E0E0E0",
   },
   healthScoreCard: {
-    backgroundColor: "#10605A08",
+    backgroundColor: "#F8F8F8",
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#10605A30",
   },
   coachTitle: {
     fontSize: 16,
@@ -1393,7 +1391,7 @@ const styles = StyleSheet.create({
   scoreValue: {
     fontSize: 42,
     fontWeight: "800",
-    color: "#10605A",
+    color: "#1A1A1A",
   },
   scoreLabel: {
     fontSize: 12,
@@ -1443,12 +1441,10 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   simulatorCard: {
-    backgroundColor: "#5CCAD410",
+    backgroundColor: "#F8F8F8",
     borderRadius: 14,
     padding: 16,
-    borderWidth: 1,
-    borderColor: "#5CCAD430",
-  },
+    },
   sliderContainer: {
     marginBottom: 16,
   },
@@ -1462,7 +1458,7 @@ const styles = StyleSheet.create({
   sliderAmount: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#10605A",
+    color: "#1A1A1A",
     marginBottom: 12,
   },
   slider: {

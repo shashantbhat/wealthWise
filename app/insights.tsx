@@ -174,13 +174,13 @@ export default function InsightsScreen() {
       <StatusBar barStyle="dark-content" />
       <ScrollView style={styles.scrollView}>
         {/* Header */}
-        <View style={styles.header}>
+        {/* <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={28} color="#1A1A1A" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Insights</Text>
           <View style={{ width: 28 }} />
-        </View>
+        </View> */}
 
         {/* Month Selector */}
         {monthSummaries.length > 0 && (
@@ -436,6 +436,7 @@ const styles = StyleSheet.create({
   monthSelector: {
     paddingHorizontal: 24,
     marginBottom: 24,
+    marginTop: 12
   },
   monthButton: {
     marginRight: 12,
