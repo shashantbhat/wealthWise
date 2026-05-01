@@ -18,6 +18,7 @@ import {
   formatINR,
   loadCategories,
 } from "../../app/utils/constants";
+import { SecondaryButton } from "../ui/secondary-button";
 
 type Props = {
   visible: boolean;
@@ -173,7 +174,7 @@ export function ManualLogModal({
               keyboardShouldPersistTaps="handled"
             >
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Amount (₹) *</Text>
+                <Text style={styles.inputLabel}>Amount (₹)</Text>
                 <View style={styles.amountInputWrapper}>
                   <Text style={styles.currencySymbol}>₹</Text>
                   <TextInput
@@ -188,7 +189,7 @@ export function ManualLogModal({
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Description *</Text>
+                <Text style={styles.inputLabel}>Description</Text>
                 <TextInput
                   style={styles.textInput}
                   value={description}
@@ -256,12 +257,12 @@ export function ManualLogModal({
             </ScrollView>
 
             <View style={styles.modalButtons}>
-              <Button
+              <SecondaryButton
                 text="Cancel"
                 onPress={handleCancel}
                 style={styles.modalButton}
               />
-              <Button
+              <SecondaryButton
                 text={
                   showCustomInput && category === "Other"
                     ? "Add & Log"

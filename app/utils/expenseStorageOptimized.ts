@@ -214,6 +214,19 @@ async function saveExpenseStore(store: ExpenseStore): Promise<void> {
 }
 
 /**
+ * Clear all expenses (for logout/reset)
+ */
+export async function clearExpenseStore(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    invalidateCache();
+  } catch (error) {
+    console.error("Error clearing expense store:", error);
+    throw error;
+  }
+}
+
+/**
  * Initialize or get current month
  */
 async function initializeCurrentMonth(
@@ -525,22 +538,139 @@ export async function deleteArchivedMonth(
   }
 }
 
-// ─── Utility Functions ────────────────────────────────────────────────────────
-
 /**
- * Export current month as JSON
+ * Get current week's expenses (Monday to today)
  */
-export async function exportCurrentMonthAsJSON(): Promise<string> {
-  const store = await loadExpenseStore();
-  return JSON.stringify(store.currentMonth, null, 2);
+export async function getCurrentWeekExpenses(): Promise<{
+  weeklyTotal: number;
+  categoryBreakdown: Record<ExpenseCategory, number>;
+  days: DayData[];
+}> {
+  try {
+    const store = await loadExpenseStore();
+    const month = store.currentMonth;
+
+    const today = new Date();
+    const monday = getMonday(today);
+
+    // Use date string comparison to avoid timezone issues
+    const mondayStr = getDateString(monday);
+    const todayStr = getDateString(today);
+
+    const weekDays = (month?.days ?? []).filter((day) => {
+      return day.date >= mondayStr && day.date <= todayStr;
+    });
+
+    const archivedWeekTotals = store.archivedMonths
+      .flatMap((archivedMonth) => archivedMonth.weeks)
+      .filter(
+        (week) => week.endDate >= mondayStr && week.startDate <= todayStr,
+      );
+
+    const weeklyTotalFromCurrent = weekDays.reduce(
+      (sum, d) => sum + (d.totalSpent || 0),
+      0,
+    );
+    const weeklyTotalFromArchived = archivedWeekTotals.reduce(
+      (sum, week) => sum + (week.weeklyTotal || 0),
+      0,
+    );
+    const weeklyTotal = Math.max(
+      0,
+      weeklyTotalFromCurrent + weeklyTotalFromArchived,
+    );
+
+    const categoryBreakdown = archivedWeekTotals.reduce((breakdown, week) => {
+      Object.entries(week.categoryBreakdown || {}).forEach(([cat, amount]) => {
+        breakdown[cat as ExpenseCategory] += Math.max(0, amount || 0);
+      });
+      return breakdown;
+    }, calculateCategoryBreakdown(weekDays));
+
+    return {
+      weeklyTotal: isNaN(weeklyTotal) ? 0 : weeklyTotal,
+      categoryBreakdown,
+      days: weekDays,
+    };
+  } catch (error) {
+    console.error("Error in getCurrentWeekExpenses:", error);
+    return {
+      weeklyTotal: 0,
+      categoryBreakdown: initializeCategoryBreakdown(),
+      days: [],
+    };
+  }
 }
 
 /**
- * Export all data as JSON
+ * Get year-to-date expenses (Jan 1 to today)
  */
-export async function exportAllDataAsJSON(): Promise<string> {
-  const store = await loadExpenseStore();
-  return JSON.stringify(store, null, 2);
+export async function getYearToDateExpenses(): Promise<{
+  yearlyTotal: number;
+  categoryBreakdown: Record<ExpenseCategory, number>;
+  months: (MonthlyData | ArchivedMonth)[];
+}> {
+  try {
+    const store = await loadExpenseStore();
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+
+    let yearlyTotal = 0;
+    const categoryBreakdown = initializeCategoryBreakdown();
+    const months: (MonthlyData | ArchivedMonth)[] = [];
+
+    // Add archived months from current year (before current month)
+    store.archivedMonths
+      .filter((m) => m.year === currentYear && m.month < currentMonth)
+      .forEach((m) => {
+        const monthTotal = Math.max(0, m.monthlyTotal || 0);
+        yearlyTotal += monthTotal;
+        Object.entries(m.categoryBreakdown || {}).forEach(([cat, amount]) => {
+          categoryBreakdown[cat as ExpenseCategory] += Math.max(0, amount || 0);
+        });
+        months.push(m);
+      });
+
+    // Add current month (all days up to today)
+    if (
+      store.currentMonth &&
+      store.currentMonth.year === currentYear &&
+      store.currentMonth.month === currentMonth
+    ) {
+      // Use date string comparison to avoid timezone issues
+      const todayStr = getDateString(today);
+      const relevantDays = store.currentMonth.days.filter(
+        (day) => day.date <= todayStr,
+      );
+
+      const currentMonthTotal = Math.max(
+        0,
+        relevantDays.reduce((sum, d) => sum + (d.totalSpent || 0), 0),
+      );
+      yearlyTotal += currentMonthTotal;
+
+      const currentCategoryBreakdown = calculateCategoryBreakdown(relevantDays);
+      Object.entries(currentCategoryBreakdown).forEach(([cat, amount]) => {
+        categoryBreakdown[cat as ExpenseCategory] += Math.max(0, amount || 0);
+      });
+
+      months.push(store.currentMonth);
+    }
+
+    return {
+      yearlyTotal: Math.max(0, isNaN(yearlyTotal) ? 0 : yearlyTotal),
+      categoryBreakdown,
+      months,
+    };
+  } catch (error) {
+    console.error("Error in getYearToDateExpenses:", error);
+    return {
+      yearlyTotal: 0,
+      categoryBreakdown: initializeCategoryBreakdown(),
+      months: [],
+    };
+  }
 }
 
 /**
@@ -556,4 +686,254 @@ export async function clearAllExpenses(): Promise<void> {
  */
 export function clearCache(): void {
   invalidateCache();
+}
+
+/**
+ * Populate sample data for testing (creates realistic expenses across categories)
+ */
+export async function populateSampleData(): Promise<void> {
+  try {
+    const store = await loadExpenseStore();
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+
+    // Initialize current month if needed
+    if (
+      !store.currentMonth ||
+      store.currentMonth.year !== currentYear ||
+      store.currentMonth.month !== currentMonth
+    ) {
+      store.currentMonth = {
+        year: currentYear,
+        month: currentMonth,
+        days: [],
+        monthlyTotal: 0,
+        categoryBreakdown: initializeCategoryBreakdown(),
+      };
+    }
+
+    // Sample expenses for current month (spread across the month)
+    const sampleExpenses = [
+      // Food expenses
+      {
+        category: "Food",
+        amount: 450,
+        description: "Grocery shopping",
+        daysAgo: 0,
+      },
+      {
+        category: "Food",
+        amount: 120,
+        description: "Lunch at restaurant",
+        daysAgo: 1,
+      },
+      {
+        category: "Food",
+        amount: 85,
+        description: "Coffee and snacks",
+        daysAgo: 2,
+      },
+      {
+        category: "Food",
+        amount: 320,
+        description: "Weekly groceries",
+        daysAgo: 3,
+      },
+
+      // Travel expenses
+      { category: "Travel", amount: 250, description: "Uber ride", daysAgo: 0 },
+      {
+        category: "Travel",
+        amount: 180,
+        description: "Bus ticket",
+        daysAgo: 4,
+      },
+
+      // Shopping expenses
+      {
+        category: "Shopping",
+        amount: 1200,
+        description: "New clothes",
+        daysAgo: 1,
+      },
+      {
+        category: "Shopping",
+        amount: 350,
+        description: "Electronics",
+        daysAgo: 5,
+      },
+
+      // Health expenses
+      {
+        category: "Health",
+        amount: 500,
+        description: "Doctor visit",
+        daysAgo: 2,
+      },
+      { category: "Health", amount: 150, description: "Medicine", daysAgo: 6 },
+
+      // Entertainment expenses
+      {
+        category: "Entertainment",
+        amount: 200,
+        description: "Movie tickets",
+        daysAgo: 0,
+      },
+      {
+        category: "Entertainment",
+        amount: 80,
+        description: "Streaming subscription",
+        daysAgo: 3,
+      },
+
+      // Accommodation expenses
+      {
+        category: "Accommodation",
+        amount: 800,
+        description: "Monthly rent",
+        daysAgo: 7,
+      },
+
+      // Wellness expenses
+      {
+        category: "Wellness",
+        amount: 300,
+        description: "Gym membership",
+        daysAgo: 1,
+      },
+      {
+        category: "Wellness",
+        amount: 120,
+        description: "Spa treatment",
+        daysAgo: 4,
+      },
+    ];
+
+    // Add sample expenses to current month
+    sampleExpenses.forEach((expense) => {
+      const expenseDate = new Date(today);
+      expenseDate.setDate(today.getDate() - expense.daysAgo);
+      const dateStr = getDateString(expenseDate);
+
+      let dayData = store.currentMonth!.days.find((d) => d.date === dateStr);
+      if (!dayData) {
+        dayData = {
+          date: dateStr,
+          expenses: [],
+          totalSpent: 0,
+        };
+        store.currentMonth!.days.push(dayData);
+      }
+
+      dayData.expenses.push({
+        id: generateExpenseId(),
+        category: expense.category as ExpenseCategory,
+        amount: expense.amount,
+        description: expense.description,
+        timestamp: expenseDate.getTime(),
+      });
+
+      dayData.totalSpent = calculateDayTotal(dayData.expenses);
+    });
+
+    // Recalculate totals
+    store.currentMonth!.monthlyTotal = store.currentMonth!.days.reduce(
+      (sum, d) => sum + d.totalSpent,
+      0,
+    );
+    store.currentMonth!.categoryBreakdown = calculateCategoryBreakdown(
+      store.currentMonth!.days,
+    );
+
+    // Add some archived data for previous month (for yearly testing)
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+    const archivedMonth: ArchivedMonth = {
+      year: prevYear,
+      month: prevMonth,
+      monthlyTotal: 2500, // Sample total
+      weeks: [
+        {
+          weekNumber: 1,
+          startDate: `${prevYear}-${String(prevMonth).padStart(2, "0")}-01`,
+          endDate: `${prevYear}-${String(prevMonth).padStart(2, "0")}-07`,
+          weeklyTotal: 600,
+          categoryBreakdown: {
+            Food: 200,
+            Travel: 150,
+            Shopping: 150,
+            Health: 50,
+            Entertainment: 30,
+            Accommodation: 0,
+            Wellness: 20,
+          },
+        },
+        {
+          weekNumber: 2,
+          startDate: `${prevYear}-${String(prevMonth).padStart(2, "0")}-08`,
+          endDate: `${prevYear}-${String(prevMonth).padStart(2, "0")}-14`,
+          weeklyTotal: 800,
+          categoryBreakdown: {
+            Food: 250,
+            Travel: 200,
+            Shopping: 200,
+            Health: 100,
+            Entertainment: 40,
+            Accommodation: 0,
+            Wellness: 10,
+          },
+        },
+        {
+          weekNumber: 3,
+          startDate: `${prevYear}-${String(prevMonth).padStart(2, "0")}-15`,
+          endDate: `${prevYear}-${String(prevMonth).padStart(2, "0")}-21`,
+          weeklyTotal: 700,
+          categoryBreakdown: {
+            Food: 180,
+            Travel: 120,
+            Shopping: 250,
+            Health: 80,
+            Entertainment: 50,
+            Accommodation: 0,
+            Wellness: 20,
+          },
+        },
+        {
+          weekNumber: 4,
+          startDate: `${prevYear}-${String(prevMonth).padStart(2, "0")}-22`,
+          endDate: `${prevYear}-${String(prevMonth).padStart(2, "0")}-28`,
+          weeklyTotal: 400,
+          categoryBreakdown: {
+            Food: 120,
+            Travel: 80,
+            Shopping: 100,
+            Health: 40,
+            Entertainment: 30,
+            Accommodation: 0,
+            Wellness: 30,
+          },
+        },
+      ],
+      categoryBreakdown: {
+        Food: 750,
+        Travel: 550,
+        Shopping: 700,
+        Health: 270,
+        Entertainment: 150,
+        Accommodation: 0,
+        Wellness: 80,
+      },
+      archivedDate: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
+    };
+
+    store.archivedMonths.push(archivedMonth);
+
+    await saveExpenseStore(store);
+    console.log("Sample data populated successfully");
+  } catch (error) {
+    console.error("Error populating sample data:", error);
+    throw error;
+  }
 }

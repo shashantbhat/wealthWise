@@ -65,7 +65,7 @@ export function BudgetModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Set Category Budgets</Text>
+          <Text style={styles.modalTitle}>Monthly Category Budgets</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {categories.map((category) => {

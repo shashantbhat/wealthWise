@@ -2,36 +2,64 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CATEGORY_ICONS, formatINR } from "../../app/utils/constants";
+import { ReportType } from "./types";
 
 type Props = {
   spendingByCategory: Record<string, number>;
-  monthlySpent: number;
+  totalSpent: number;
+  budgets: Record<string, number>;
+  reportType: ReportType;
   hideAmounts: boolean;
   onPress?: () => void;
 };
 
 export function InsightsSection({
   spendingByCategory,
-  monthlySpent,
+  totalSpent,
+  budgets,
+  reportType,
   hideAmounts,
   onPress,
 }: Props) {
   const displayAmount = (amount: number) =>
     hideAmounts ? "₹ ----" : formatINR(amount);
 
+  const totalSpentValue = Math.max(0, totalSpent || 0);
+  const categoriesWithExpenses = Object.entries(spendingByCategory).filter(
+    ([, amount]) => amount > 0,
+  );
+
+  // Calculate adjusted budget for each category based on report type
+  const getAdjustedBudget = (category: string, monthlyBudget: number) => {
+    switch (reportType) {
+      case "weekly":
+        return monthlyBudget / 4;
+      case "yearly":
+        return monthlyBudget * 12;
+      case "monthly":
+      default:
+        return monthlyBudget;
+    }
+  };
+
   return (
     <>
       <TouchableOpacity onPress={onPress}>
         <Text style={styles.sectionTitle}>Insights</Text>
       </TouchableOpacity>
-      {Object.keys(spendingByCategory).length === 0 ? (
+      {categoriesWithExpenses.length === 0 ? (
         <Text style={styles.emptyText}>No expenses to analyze</Text>
       ) : (
         <TouchableOpacity onPress={onPress} style={styles.insightsContainer}>
-          {Object.entries(spendingByCategory)
+          {categoriesWithExpenses
             .sort((a, b) => b[1] - a[1])
             .map(([category, amount]) => {
-              const pct = (amount / monthlySpent) * 100;
+              const monthlyBudget = budgets[category] || 0;
+              const adjustedBudget = getAdjustedBudget(category, monthlyBudget);
+              const budgetPct =
+                adjustedBudget > 0 ? (amount / adjustedBudget) * 100 : 0;
+              const totalPct =
+                totalSpentValue > 0 ? (amount / totalSpentValue) * 100 : 0;
               return (
                 <View key={category} style={styles.insightItem}>
                   <View style={styles.insightCategoryInfo}>
@@ -47,7 +75,8 @@ export function InsightsSection({
                       <View
                         style={[
                           styles.insightProgressFill,
-                          { width: `${pct}%` },
+                          { width: `${Math.min(budgetPct, 100)}%` },
+                          budgetPct > 100 && styles.overBudget,
                         ]}
                       />
                     </View>
@@ -56,8 +85,13 @@ export function InsightsSection({
                     <Text style={styles.insightAmountValue}>
                       {displayAmount(amount)}
                     </Text>
-                    <Text style={styles.insightPercentage}>
-                      {Math.round(pct)}%
+                    <Text
+                      style={[
+                        styles.insightPercentage,
+                        budgetPct > 100 && styles.overBudgetText,
+                      ]}
+                    >
+                      {Math.round(budgetPct)}%
                     </Text>
                   </View>
                 </View>
@@ -125,6 +159,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#1A1A1A",
     borderRadius: 3,
   },
+  overBudget: {
+    backgroundColor: "#FF4444",
+  },
   insightAmount: {
     alignItems: "flex-end",
   },
@@ -138,5 +175,8 @@ const styles = StyleSheet.create({
     color: "#999999",
     fontWeight: "600",
     marginTop: 2,
+  },
+  overBudgetText: {
+    color: "#FF4444",
   },
 });

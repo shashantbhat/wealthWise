@@ -131,7 +131,7 @@ function SIPCalculator() {
   return (
     <View style={calcS.card}>
       <View style={calcS.titleRow}>
-        <Ionicons name="calculator" size={19} color="#10605A" />
+        <Ionicons name="calculator" size={20} color="black" />
         <InvestText style={calcS.title}>Investment Calculator</InvestText>
       </View>
 
@@ -311,8 +311,6 @@ const calcS = StyleSheet.create({
   card: {
     backgroundColor: "#FFF",
     borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: "rgba(16,96,90,0.35)",
     padding: 18,
     marginBottom: 20,
     shadowColor: "#10605A",
@@ -336,13 +334,13 @@ const calcS = StyleSheet.create({
     marginBottom: 14,
   },
   tBtn: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: "center" },
-  tOn: { backgroundColor: "#10605A" },
+  tOn: { backgroundColor: "#1A1A1A" },
   tTxt: { fontSize: 13, fontWeight: "600", color: "#999" },
   tOnTxt: { color: "#FFF" },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
-    color: "#AAA",
+    color: "black",
     textTransform: "uppercase",
     letterSpacing: 0.6,
     marginBottom: 6,
@@ -357,7 +355,7 @@ const calcS = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  prefix: { fontSize: 17, fontWeight: "700", color: "#10605A", marginRight: 4 },
+  prefix: { fontSize: 17, fontWeight: "700", color: "#1A1A1A", marginRight: 4 },
   suffix: { fontSize: 14, color: "#AAA", marginLeft: 6 },
   input: {
     flex: 1,
@@ -907,6 +905,12 @@ function InvestmentCard({
               {item.expected_return_label}
             </InvestText>
           </View>
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color="#CCC"
+            style={{ alignSelf: "center" }}
+          />
         </View>
 
         {/* Meta row */}
@@ -930,12 +934,12 @@ function InvestmentCard({
         </View>
       </View>
 
-      <Ionicons
+      {/* <Ionicons
         name="chevron-forward"
         size={16}
         color="#CCC"
         style={{ alignSelf: "center" }}
-      />
+      /> */}
     </TouchableOpacity>
   );
 }
@@ -953,11 +957,11 @@ const cardStyles = StyleSheet.create({
     paddingVertical: 16,
   },
   accentBar: {
-    width: 4,
-    borderRadius: 2,
+    // width: 4,
+    // borderRadius: 2,
     marginRight: 14,
-    borderTopLeftRadius: 18,
-    borderBottomLeftRadius: 18,
+    // borderTopLeftRadius: 18,
+    // borderBottomLeftRadius: 18,
   },
   titleRow: {
     flexDirection: "row",
