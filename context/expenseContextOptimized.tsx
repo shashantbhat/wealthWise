@@ -15,7 +15,6 @@ import React, {
     useContext,
     useEffect,
     useMemo,
-    useRef,
     useState,
 } from "react";
 
@@ -61,9 +60,6 @@ export function ExpenseProvider({ children }: ExpenseProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Track pending operations to prevent duplicate requests
-  const pendingOpsRef = useRef(0);
-
   // Load initial data on mount
   useEffect(() => {
     refreshData();
@@ -71,13 +67,7 @@ export function ExpenseProvider({ children }: ExpenseProviderProps) {
 
   // Refresh data from storage
   const refreshData = useCallback(async () => {
-    // Prevent overlapping refresh calls
-    if (pendingOpsRef.current > 0) {
-      return;
-    }
-
     try {
-      pendingOpsRef.current++;
       setLoading(true);
       setError(null);
 
@@ -92,7 +82,6 @@ export function ExpenseProvider({ children }: ExpenseProviderProps) {
       console.error("Error refreshing expense data:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
-      pendingOpsRef.current--;
       setLoading(false);
     }
   }, []);
@@ -100,26 +89,19 @@ export function ExpenseProvider({ children }: ExpenseProviderProps) {
   // Add expense with optimistic update
   const addExpense = useCallback(
     async (category: ExpenseCategory, amount: number, description?: string) => {
-      if (pendingOpsRef.current > 0) {
-        throw new Error("Operation in progress");
-      }
-
       try {
-        pendingOpsRef.current++;
         setError(null);
 
         // Perform storage operation
         await storageAddExpense(category, amount, description);
 
-        // Refresh data in background (optimistic update already done by caller)
+        // Refresh data immediately after saving
         await refreshData();
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Error adding expense";
         setError(message);
         throw err;
-      } finally {
-        pendingOpsRef.current--;
       }
     },
     [refreshData],
@@ -128,12 +110,7 @@ export function ExpenseProvider({ children }: ExpenseProviderProps) {
   // Delete expense with optimistic update
   const deleteExpense = useCallback(
     async (expenseId: string) => {
-      if (pendingOpsRef.current > 0) {
-        throw new Error("Operation in progress");
-      }
-
       try {
-        pendingOpsRef.current++;
         setError(null);
 
         await storageDeleteExpense(expenseId);
@@ -143,8 +120,6 @@ export function ExpenseProvider({ children }: ExpenseProviderProps) {
           err instanceof Error ? err.message : "Error deleting expense";
         setError(message);
         throw err;
-      } finally {
-        pendingOpsRef.current--;
       }
     },
     [refreshData],
@@ -152,12 +127,7 @@ export function ExpenseProvider({ children }: ExpenseProviderProps) {
 
   // Archive month
   const archiveMonth = useCallback(async () => {
-    if (pendingOpsRef.current > 0) {
-      throw new Error("Operation in progress");
-    }
-
     try {
-      pendingOpsRef.current++;
       setError(null);
 
       await archiveCurrentMonth();
@@ -168,8 +138,6 @@ export function ExpenseProvider({ children }: ExpenseProviderProps) {
         err instanceof Error ? err.message : "Error archiving month";
       setError(message);
       throw err;
-    } finally {
-      pendingOpsRef.current--;
     }
   }, [refreshData]);
 

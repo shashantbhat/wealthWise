@@ -43,12 +43,12 @@ export function SecondaryButton({
 const styles = StyleSheet.create({
   button: {
     backgroundColor: "#000000",
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 50,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 54,
+    alignSelf: "auto",
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.2)",
   },
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   label: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
   },
