@@ -1,6 +1,7 @@
 import { SuccessModal } from "@/components/SuccessModal";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { SecondaryButton } from "@/components/ui/secondary-button";
+import { Typography } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -45,8 +46,13 @@ export default function SignupScreen() {
       Alert.alert("Error", "Please enter a password");
       return false;
     }
-    if (password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters");
+    // Require min 8 chars, at least one uppercase, one number, one special char
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        "Error",
+        "Password must be at least 8 characters, include 1 uppercase letter, 1 number, and 1 special character",
+      );
       return false;
     }
     if (mode === "signup" && password !== confirmPassword) {
@@ -198,7 +204,7 @@ export default function SignupScreen() {
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="Min 6 characters"
+                    placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special"
                     placeholderTextColor="#666"
                     value={password}
                     onChangeText={setPassword}
@@ -319,8 +325,7 @@ const styles = StyleSheet.create({
   },
   modeText: {
     color: "#9ca3af",
-    fontWeight: "600",
-    fontSize: 13,
+    ...Typography.label,
   },
   modeTextActive: {
     color: "#ffffff",
@@ -337,8 +342,7 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     color: "#111827",
-    fontSize: 15,
-    fontWeight: "700",
+    ...Typography.h6,
   },
   disabledButton: {
     opacity: 0.65,
@@ -356,20 +360,18 @@ const styles = StyleSheet.create({
   },
   separatorText: {
     color: "#6b7280",
-    fontSize: 12,
-    fontWeight: "700",
+    ...Typography.label,
     letterSpacing: 1,
   },
   title: {
-    fontSize: 28,
+    ...Typography.h2,
     fontWeight: "bold",
     color: "#ffffff",
     marginBottom: 12,
   },
   subtitle: {
-    fontSize: 14,
+    ...Typography.bodySmall,
     color: "#aaa",
-    lineHeight: 20,
   },
   errorContainer: {
     flexDirection: "row",
@@ -385,7 +387,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#ef4444",
     marginLeft: 10,
-    fontSize: 13,
+    ...Typography.label,
     flex: 1,
   },
   form: {
@@ -395,7 +397,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 14,
+    ...Typography.bodySmall,
     fontWeight: "600",
     color: "#fff",
     marginBottom: 8,
@@ -414,7 +416,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
     color: "#fff",
-    fontSize: 14,
+    ...Typography.bodySmall,
   },
   buttonContainer: {
     gap: 12,

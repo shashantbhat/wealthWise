@@ -16,6 +16,10 @@ import { AuthProvider } from "@/context/auth-context";
 import { ExpenseProvider } from "@/context/expenseContextOptimized";
 import { UserProvider } from "@/context/user-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useLoadFonts } from "@/hooks/use-load-fonts";
+import * as SplashScreen from "expo-splash-screen";
+
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: "onboarding",
@@ -25,6 +29,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [onboardingDone, setOnboardingDone] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [fontsLoaded] = useLoadFonts();
 
   useEffect(() => {
     const checkOnboarding = async () => {
@@ -37,11 +42,16 @@ export default function RootLayout() {
         console.error("Error checking onboarding status:", error);
         setOnboardingDone(false);
       } finally {
-        setIsLoading(false);
+        if (fontsLoaded) {
+          SplashScreen.hideAsync();
+          setIsLoading(false);
+        }
       }
     };
-    checkOnboarding();
-  }, []);
+    if (fontsLoaded) {
+      checkOnboarding();
+    }
+  }, [fontsLoaded]);
 
   if (isLoading) {
     return (

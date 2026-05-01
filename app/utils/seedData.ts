@@ -192,8 +192,7 @@ export async function seedSampleData(): Promise<void> {
       archivedMonths.push(createArchivedMonth(year, month));
     }
 
-    // Create current month with sample data
-    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    // Create current month with deterministic sample data (~₹35,000)
     const currentMonthData: MonthlyData = {
       year: currentYear,
       month: currentMonth,
@@ -202,34 +201,69 @@ export async function seedSampleData(): Promise<void> {
       categoryBreakdown: initializeCategoryBreakdown(),
     };
 
-    // Add expenses for the current month (up to today)
-    for (let day = 1; day <= Math.min(now.getDate(), daysInMonth); day++) {
-      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const dayExpenses = generateSampleExpensesForDate(
-        new Date(currentYear, currentMonth - 1, day),
-        Math.floor(Math.random() * 3) + 1,
-      );
+    // Target totals by category (INR)
+    const categoryTargets: Record<string, number> = {
+      Shopping: 5000, // 25% over default 4000 budget
+      Food: 7000, // 40% over default 5000 budget (eating out heavy)
+      Accommodation: 15000,
+      Travel: 3500,
+      Health: 1500,
+      Entertainment: 2000,
+      Wellness: 1000,
+    };
 
-      const dayData = {
+    // Distribute transactions across a set of dates in the month
+    const dateSlots = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29];
+    const daysMap: Record<string, Array<{ category: ExpenseCategory; amount: number; description?: string }>> = {};
+
+    const monthStr = String(currentMonth).padStart(2, "0");
+    dateSlots.forEach((d) => {
+      const date = `${currentYear}-${monthStr}-${String(d).padStart(2, "0")}`;
+      daysMap[date] = [];
+    });
+
+    // Split each category total evenly across the date slots
+    Object.entries(categoryTargets).forEach(([cat, total]) => {
+      const parts = dateSlots.length;
+      const base = Math.floor(total / parts);
+      let remainder = total % parts;
+
+      for (let i = 0; i < parts; i++) {
+        const amount = base + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) remainder -= 1;
+
+        // push expense only if amount > 0
+        if (amount > 0) {
+          const date = `${currentYear}-${monthStr}-${String(dateSlots[i]).padStart(2, "0")}`;
+          daysMap[date].push({ category: cat as ExpenseCategory, amount, description: `${cat} expense` });
+        }
+      }
+    });
+
+    // Convert daysMap into DayData entries
+    Object.entries(daysMap).forEach(([dateStr, exps]) => {
+      const dayExpenses = exps.map((exp) => ({
+        id: `${dateStr}-${Math.random().toString(36).substr(2, 9)}`,
+        category: exp.category,
+        amount: Math.round(exp.amount * 100) / 100,
+        description: exp.description,
+        timestamp: new Date(dateStr).getTime(),
+      }));
+
+      const totalSpent = dayExpenses.reduce((s, e) => s + e.amount, 0);
+
+      currentMonthData.days.push({
         date: dateStr,
-        expenses: dayExpenses.map((exp) => ({
-          id: `${dateStr}-${Math.random().toString(36).substr(2, 9)}`,
-          category: exp.category,
-          amount: Math.round(exp.amount * 100) / 100,
-          description: exp.description,
-          timestamp: new Date(dateStr).getTime(),
-        })),
-        totalSpent: dayExpenses.reduce((sum, exp) => sum + exp.amount, 0),
-      };
-
-      currentMonthData.days.push(dayData);
-
-      // Update category breakdown
-      dayExpenses.forEach((exp) => {
-        currentMonthData.categoryBreakdown[exp.category] += exp.amount;
-        currentMonthData.monthlyTotal += exp.amount;
+        expenses: dayExpenses,
+        totalSpent,
       });
-    }
+
+      // Update breakdown
+      dayExpenses.forEach((e) => {
+        currentMonthData.categoryBreakdown[e.category] += e.amount;
+        currentMonthData.monthlyTotal += e.amount;
+      });
+    });
 
     // Save to AsyncStorage
     const store: ExpenseStore = {
