@@ -1,7 +1,7 @@
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -12,6 +12,7 @@ import "../global.css";
 import { loadCategories } from "@/app/utils/constants";
 import { isOnboardingComplete } from "@/app/utils/userContextStorage";
 import { GradientBackground } from "@/components/gradient-background";
+import { AuthProvider } from "@/context/auth-context";
 import { ExpenseProvider } from "@/context/expenseContextOptimized";
 import { UserProvider } from "@/context/user-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -52,33 +53,38 @@ export default function RootLayout() {
 
   return (
     <GradientBackground>
-      <UserProvider>
-        <ExpenseProvider>
-          <ThemeProvider
-            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-          >
-            <Stack initialRouteName="onboarding">
-              <Stack.Screen
-                name="onboarding"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="modal"
-                options={{ presentation: "modal", title: "Modal" }}
-              />
-              <Stack.Screen
-                name="profile"
-                options={{
-                  headerShown: false,
-                  animation: "slide_from_right",
-                }}
-              />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
-        </ExpenseProvider>
-      </UserProvider>
+      <AuthProvider>
+        <UserProvider>
+          <ExpenseProvider>
+            <ThemeProvider
+              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              <Stack
+                initialRouteName={onboardingDone ? "(tabs)" : "onboarding"}
+              >
+                <Stack.Screen
+                  name="onboarding"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="signup" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="modal"
+                  options={{ presentation: "modal", title: "Modal" }}
+                />
+                <Stack.Screen
+                  name="profile"
+                  options={{
+                    headerShown: false,
+                    animation: "slide_from_right",
+                  }}
+                />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </ExpenseProvider>
+        </UserProvider>
+      </AuthProvider>
     </GradientBackground>
   );
 }

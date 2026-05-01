@@ -4,7 +4,7 @@ import { useUser } from "@/context/user-context";
 import questionnaireData from "@/data/questionnaire.json";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     Dimensions,
@@ -87,6 +87,13 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [inputValue, setInputValue] = useState("");
   const router = useRouter();
+  const params = useLocalSearchParams<{ start?: string }>();
+
+  React.useEffect(() => {
+    if (params.start === "questionnaire") {
+      setStep("questionnaire");
+    }
+  }, [params.start]);
   const { setAnswers: saveAnswersToContext, setProfile } = useUser();
 
   function handleAnswer(id: string, value: AnswerValue) {
@@ -131,7 +138,7 @@ export default function Onboarding() {
     }
   }
 
-  if (step === "landing") {
+  if (step === "landing" && params.start !== "questionnaire") {
     return <LandingScreen onStart={() => setStep("questionnaire")} />;
   }
 
@@ -162,6 +169,7 @@ function LandingScreen({ onStart }: { onStart: () => void }) {
   const orbit1 = useSharedValue(Math.PI * 0.3); // piggy-bank  — inner
   const orbit2 = useSharedValue(Math.PI * 1.2); // chart-line  — middle
   const orbit3 = useSharedValue(Math.PI * 1.8); // bitcoin     — outer
+  const router = useRouter();
 
   React.useEffect(() => {
     orbit1.value = withRepeat(
@@ -208,7 +216,7 @@ function LandingScreen({ onStart }: { onStart: () => void }) {
     top: CY + RINGS[2].ry * Math.sin(orbit3.value) - H,
   }));
 
-  const handlePress = () => setTimeout(() => onStart(), 50);
+  const handlePress = () => setTimeout(() => router.push("/signup"), 50);
 
   return (
     <View style={ls.root}>
