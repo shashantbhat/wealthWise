@@ -78,7 +78,7 @@ export function ManualLogModal({
     const categoryBudget = budgets[category];
     const willExceed = newCategorySpend > categoryBudget;
 
-    onSubmit({ category, description, amount: parsed });
+    onSubmit([{ category, description, amount: parsed }]);
     setDescription("");
     setAmount("");
     setCategory("Food");
@@ -125,7 +125,7 @@ export function ManualLogModal({
       // Submit the expense with new category
       const parsed = parseFloat(amount);
       if (!isNaN(parsed) && parsed > 0) {
-        onSubmit({ category: trimmedName, description, amount: parsed });
+        onSubmit([{ category: trimmedName, description, amount: parsed }]);
         setDescription("");
         setAmount("");
         setCategory("Food");

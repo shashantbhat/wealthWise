@@ -181,5 +181,5 @@ app.get("/positions", async (req, res) => {
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+  console.log(`✅ Server running at http://localhost:${POtRT}`);
 });

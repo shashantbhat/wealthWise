@@ -86,7 +86,7 @@ export function VoiceLogModal({
         type: "audio/m4a",
       });
 
-      const response = await fetch("http://192.168.1.3:5001/transcribe", {
+      const response = await fetch("http://172.20.10.3:5001/transcribe", {
         method: "POST",
         body: formData,
       });
