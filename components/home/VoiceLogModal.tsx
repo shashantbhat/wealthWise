@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { CATEGORIES, formatINR } from "../../app/utils/constants";
 import { SecondaryButton } from "../ui/secondary-button";
+import {BASE_URL} from "../../config/api"
 
 import { startRecording, stopRecording } from "@/app/utils/recordAudio";
 import {
@@ -86,7 +87,7 @@ export function VoiceLogModal({
         type: "audio/m4a",
       });
 
-      const response = await fetch("http://172.20.10.3:5001/transcribe", {
+      const response = await fetch(`${BASE_URL}/transcribe`, {
         method: "POST",
         body: formData,
       });

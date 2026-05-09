@@ -1,0 +1,17 @@
+service: wealthwise-backend
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-north-1
+  environment:
+    DEEPGRAM_API_KEY: ${env:DEEPGRAM_API_KEY}
+    GEMINI_API_KEY: ${env:GEMINI_API_KEY}
+  deploymentBucket:
+    name: wealthwise-serverless-deploy-845844494979
+
+functions:
+  api:
+    handler: handler.handler
+    events:
+      - httpApi: "*"
